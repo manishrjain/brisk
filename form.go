@@ -53,6 +53,7 @@ func NewFormModel(defaults map[string]string, md *MarketData) FormModel {
 			Name: "ECONOMIC ASSUMPTIONS",
 			Fields: []FormField{
 				makeField("inflation_rate", "Inflation Rate (%)", "Annual inflation for all recurring costs", defaults),
+				makeToggleField("include_30year", "Include 30-Year Projections", "Toggle to show 15y, 20y, 30y periods (default: 10y max)", defaults),
 			},
 		},
 		{

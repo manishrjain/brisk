@@ -15,6 +15,7 @@ var reader = bufio.NewReader(os.Stdin)
 var savedDefaults map[string]string
 var currentInputs map[string]string
 var useDefaults bool
+var fullNumbers bool
 
 // Global arrays for monthly costs
 var monthlyBuyingCosts []float64
@@ -29,6 +30,7 @@ const inputsFile = ".rentobuy_inputs.json"
 func main() {
 	// Parse command line flags
 	flag.BoolVar(&useDefaults, "defaults", false, "Use all previously saved default values without prompting")
+	flag.BoolVar(&fullNumbers, "full-numbers", false, "Display full numbers instead of compact K/M format")
 	flag.Parse()
 
 	// Update market data (blocking to ensure we have it for display)
@@ -71,6 +73,12 @@ func main() {
 	if err != nil {
 		fmt.Println("Invalid inflation rate")
 		return
+	}
+
+	// Get 30-year projection toggle
+	include30Year, err := getFloatValue("include_30year")
+	if err != nil {
+		include30Year = 0 // Default to 10-year projections only
 	}
 
 	purchasePrice, err := getFloatValue("purchase_price")
@@ -233,22 +241,22 @@ func main() {
 
 	// Display projections
 	fmt.Println("\n=== Total Expenditure Comparison ===")
-	displayExpenditureTable(downpayment, totalMonths, rentDeposit)
+	displayExpenditureTable(downpayment, totalMonths, rentDeposit, include30Year)
 
 	if loanAmount > 0 {
 		fmt.Println("\n=== Loan Amortization Details ===")
-		displayAmortizationTable(loanAmount, totalMonths)
+		displayAmortizationTable(loanAmount, totalMonths, include30Year)
 	}
 
 	if includeSelling > 0 {
 		fmt.Println("\n=== Sale Proceeds Analysis ===")
 		displaySaleProceeds(purchasePrice, downpayment, totalMonths,
-			agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax)
+			agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax, include30Year)
 	}
 
 	fmt.Println("\n=== Net Worth Projections: Buy vs Rent ===")
 	displayComparisonTable(purchasePrice, downpayment, totalMonths,
-		rentDeposit, investmentReturnRate)
+		rentDeposit, investmentReturnRate, include30Year)
 }
 
 // getFloatValue gets a float value from currentInputs
@@ -364,7 +372,7 @@ func getStringInputAndParse(prompt string, parser func(string) (int, error)) (in
 	return parser(strings.TrimSpace(input))
 }
 
-// formatCurrency formats a number as currency with commas and 2 decimal places
+// formatCurrency formats a number as currency with K/M suffixes (compact) or full format
 func formatCurrency(amount float64) string {
 	// Handle negative numbers
 	sign := ""
@@ -373,21 +381,39 @@ func formatCurrency(amount float64) string {
 		amount = -amount
 	}
 
-	// Format with 2 decimal places
-	formatted := fmt.Sprintf("%.2f", amount)
-	parts := strings.Split(formatted, ".")
+	// If fullNumbers flag is set, use full format with dollar sign and commas
+	if fullNumbers {
+		// Format with 2 decimal places
+		formatted := fmt.Sprintf("%.2f", amount)
+		parts := strings.Split(formatted, ".")
 
-	// Add commas to the integer part
-	intPart := parts[0]
-	var result strings.Builder
-	for i, digit := range intPart {
-		if i > 0 && (len(intPart)-i)%3 == 0 {
-			result.WriteRune(',')
+		// Add commas to the integer part
+		intPart := parts[0]
+		var result strings.Builder
+		for i, digit := range intPart {
+			if i > 0 && (len(intPart)-i)%3 == 0 {
+				result.WriteRune(',')
+			}
+			result.WriteRune(digit)
 		}
-		result.WriteRune(digit)
+
+		return fmt.Sprintf("%s$%s.%s", sign, result.String(), parts[1])
 	}
 
-	return fmt.Sprintf("%s$%s.%s", sign, result.String(), parts[1])
+	// Default: compact format with K/M suffixes, no dollar sign
+	var formatted string
+	if amount >= 1000000 {
+		// Millions
+		formatted = fmt.Sprintf("%.2fM", amount/1000000)
+	} else if amount >= 1000 {
+		// Thousands
+		formatted = fmt.Sprintf("%.2fK", amount/1000)
+	} else {
+		// Less than 1000
+		formatted = fmt.Sprintf("%.2f", amount)
+	}
+
+	return sign + formatted
 }
 
 // formatNumber formats an integer with commas
@@ -455,12 +481,12 @@ func calculateMonthlyPayment(principal, monthlyRate float64, months int) float64
 }
 
 // getPeriods returns the list of time periods to display in tables
-func getPeriods(loanDuration int) []struct {
+func getPeriods(loanDuration int, include30Year bool) []struct {
 	label  string
 	months int
 } {
-	// Define standard periods with proper spacing for alignment
-	standardPeriods := []struct {
+	// Define base periods (always included)
+	basePeriods := []struct {
 		label  string
 		months int
 	}{
@@ -474,9 +500,22 @@ func getPeriods(loanDuration int) []struct {
 		{"  8y", 96},
 		{"  9y", 108},
 		{" 10y", 120},
+	}
+
+	// Extended periods (only if include30Year is true)
+	extendedPeriods := []struct {
+		label  string
+		months int
+	}{
 		{" 15y", 180},
 		{" 20y", 240},
 		{" 30y", 360},
+	}
+
+	// Build standard periods based on include30Year flag
+	standardPeriods := basePeriods
+	if include30Year {
+		standardPeriods = append(standardPeriods, extendedPeriods...)
 	}
 
 	// Build the final list of periods, inserting loan term if needed
@@ -609,8 +648,8 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 }
 
 // displayAmortizationTable displays loan amortization details
-func displayAmortizationTable(loanAmount float64, loanDuration int) {
-	periods := getPeriods(loanDuration)
+func displayAmortizationTable(loanAmount float64, loanDuration int, include30Year float64) {
+	periods := getPeriods(loanDuration, include30Year > 0)
 
 	// Print table header
 	fmt.Printf("\n%-20s %-20s %-20s %-20s\n", "Period", "Principal Paid", "Interest Paid", "Loan Balance")
@@ -638,8 +677,8 @@ func displayAmortizationTable(loanAmount float64, loanDuration int) {
 
 // displayExpenditureTable displays total expenditure for buying vs renting
 // Uses global monthlyBuyingCosts and monthlyRentingCosts arrays
-func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit float64) {
-	periods := getPeriods(loanDuration)
+func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit float64, include30Year float64) {
+	periods := getPeriods(loanDuration, include30Year > 0)
 
 	// Print table header
 	fmt.Printf("\n%-20s %-25s %-25s %-25s\n", "Period", "Buying Expenditure", "Renting Expenditure", "Difference")
@@ -673,12 +712,12 @@ func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit 
 // displayComparisonTable displays buy vs rent net worth projections side-by-side
 // Uses global monthlyBuyingCosts and monthlyRentingCosts arrays
 func displayComparisonTable(purchasePrice, downpayment float64, loanDuration int,
-	rentDeposit, investmentReturnRate float64) {
-	periods := getPeriods(loanDuration)
+	rentDeposit, investmentReturnRate float64, include30Year float64) {
+	periods := getPeriods(loanDuration, include30Year > 0)
 
 	// Print table header
-	fmt.Printf("\n%-15s %-18s %-18s %-18s %-18s %-18s\n", "Period", "Asset Value", "Buying Net Worth", "Cumulative Savings", "Renting Net Worth", "RENT - BUY")
-	fmt.Println(strings.Repeat("-", 110))
+	fmt.Printf("\n%-15s %-18s %-18s %-18s %-18s %-18s %-18s\n", "Period", "Asset Value", "Buying Net Worth", "Cumulative Savings", "Market Return", "Renting Net Worth", "RENT - BUY")
+	fmt.Println(strings.Repeat("-", 128))
 
 	// Print each row
 	for _, period := range periods {
@@ -696,13 +735,18 @@ func displayComparisonTable(purchasePrice, downpayment float64, loanDuration int
 			cumulativeSavings += monthlyBuyingCosts[i] - monthlyRentingCosts[i]
 		}
 
+		// Calculate market return (investment growth portion only)
+		recoverableDeposit := rentDeposit * 0.75
+		marketReturn := rentingNetWorth - cumulativeSavings - recoverableDeposit
+
 		difference := rentingNetWorth - buyingNetWorth
 
-		fmt.Printf("%-15s %-18s %-18s %-18s %-18s %-18s\n",
+		fmt.Printf("%-15s %-18s %-18s %-18s %-18s %-18s %-18s\n",
 			"NET "+period.label,
 			formatCurrency(assetValue),
 			formatCurrency(buyingNetWorth),
 			formatCurrency(cumulativeSavings),
+			formatCurrency(marketReturn),
 			formatCurrency(rentingNetWorth),
 			formatCurrency(difference),
 		)
@@ -711,8 +755,8 @@ func displayComparisonTable(purchasePrice, downpayment float64, loanDuration int
 
 // displaySaleProceeds displays the proceeds from selling the property at various periods
 func displaySaleProceeds(purchasePrice, downpayment float64, loanDuration int,
-	agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax float64) {
-	periods := getPeriods(loanDuration)
+	agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax float64, include30Year float64) {
+	periods := getPeriods(loanDuration, include30Year > 0)
 
 	// Print table header
 	fmt.Printf("\n%-15s %-18s %-18s %-18s %-18s %-18s %-18s\n",
