@@ -378,6 +378,13 @@ func runSellVsKeepScenario(marketData *MarketData) {
 		displayAmortizationTable()
 	}
 
+	// Display expense breakdowns
+	includeRenting, _ := getFloatValue("include_renting_sell")
+	if includeRenting > 0 {
+		displaySellExpensesBreakdown()
+	}
+	displayKeepExpensesBreakdown()
+
 	// Display sale proceeds analysis at various future periods
 	displaySaleProceeds()
 
@@ -690,27 +697,25 @@ func getPeriods(loanDuration int, include30Year bool) []struct {
 		standardPeriods = append(standardPeriods, extendedPeriods...)
 	}
 
-	// Build the final list of periods, inserting loan term if needed
+	// Build the final list of periods, inserting loan term if needed (only if it's a full year)
 	periods := []struct {
 		label  string
 		months int
 	}{}
 
-	// Create loan term label with X prefix
+	// Only include loan term if it's a full year
 	var loanTermLabel string
-	if loanDuration%12 == 0 {
+	includeLoanTerm := false
+	if loanDuration > 0 && loanDuration%12 == 0 {
 		years := loanDuration / 12
 		loanTermLabel = fmt.Sprintf("X %dy", years)
-	} else {
-		years := loanDuration / 12
-		months := loanDuration % 12
-		loanTermLabel = fmt.Sprintf("X %dy%dm", years, months)
+		includeLoanTerm = true
 	}
 
 	inserted := false
 	for _, period := range standardPeriods {
-		// Insert loan term before the first period that's longer
-		if !inserted && loanDuration < period.months && loanDuration > 0 {
+		// Insert loan term before the first period that's longer (only if it's a full year)
+		if includeLoanTerm && !inserted && loanDuration < period.months {
 			periods = append(periods, struct {
 				label  string
 				months int
@@ -718,8 +723,8 @@ func getPeriods(loanDuration int, include30Year bool) []struct {
 			inserted = true
 		}
 
-		// Skip if this period matches the loan duration
-		if period.months == loanDuration {
+		// Skip if this period matches the loan duration (replace with X prefix if full year)
+		if period.months == loanDuration && includeLoanTerm {
 			periods = append(periods, struct {
 				label  string
 				months int
@@ -730,8 +735,8 @@ func getPeriods(loanDuration int, include30Year bool) []struct {
 		}
 	}
 
-	// If loan term is longer than all standard periods, add it at the end
-	if !inserted && loanDuration > 0 {
+	// If loan term is longer than all standard periods, add it at the end (only if full year)
+	if includeLoanTerm && !inserted {
 		periods = append(periods, struct {
 			label  string
 			months int
@@ -876,6 +881,178 @@ func displayAmortizationTable() {
 
 	notes := "Note: Monthly payment is fixed. Each payment covers interest on remaining balance, with the rest going to principal. Early payments are mostly interest."
 	displayTable("LOAN AMORTIZATION DETAILS", rows, notes, false)
+}
+
+// displaySellExpensesBreakdown displays breakdown of rental expenses for SELL scenario
+func displaySellExpensesBreakdown() {
+	periods := getPeriods(config.totalMonths, config.include30Year > 0)
+
+	// Pre-calculate annual expenses for each year (0-30 years)
+	type yearlyRentExpenses struct {
+		monthlyRent float64
+		rentCosts   float64
+		total       float64
+	}
+
+	// Calculate expenses for each 12-month period
+	yearlyData := make([]yearlyRentExpenses, 31) // 0-30 years
+
+	for year := 0; year < 31; year++ {
+		var ye yearlyRentExpenses
+
+		// Calculate monthly rent for this year (12 months)
+		inflatedMonthlyRent := config.monthlyRent * math.Pow(1+config.inflationRate/100, float64(year))
+		ye.monthlyRent = inflatedMonthlyRent * 12
+
+		// Annual rent costs for this year
+		inflatedAnnualCost := config.annualRentCosts * math.Pow(1+config.inflationRate/100, float64(year))
+		ye.rentCosts = inflatedAnnualCost
+
+		ye.total = ye.monthlyRent + ye.rentCosts
+		yearlyData[year] = ye
+	}
+
+	// Build table rows
+	rows := [][]string{
+		{"Period", "Monthly Rent", "Rent Costs", "Total", "Cumulative Total"},
+	}
+
+	// Build each data row
+	for _, period := range periods {
+		// Determine which year this period represents
+		years := period.months / 12
+		if years >= len(yearlyData) {
+			years = len(yearlyData) - 1
+		}
+
+		// Get annual expenses for this specific year
+		ye := yearlyData[years]
+
+		// Calculate cumulative total (includes deposit and recoverable)
+		cumulativeTotal := 0.0
+		cumulativeMonthlyRent := 0.0
+		for i := 0; i < period.months; i++ {
+			year := i / 12
+			inflatedMonthlyRent := config.monthlyRent * math.Pow(1+config.inflationRate/100, float64(year))
+			cumulativeMonthlyRent += inflatedMonthlyRent
+		}
+
+		cumulativeAnnualRentCosts := 0.0
+		fullYears := period.months / 12
+		for year := 0; year < fullYears; year++ {
+			inflatedAnnualCost := config.annualRentCosts * math.Pow(1+config.inflationRate/100, float64(year))
+			cumulativeAnnualRentCosts += inflatedAnnualCost
+		}
+		if period.months%12 > 0 {
+			inflatedAnnualCost := config.annualRentCosts * math.Pow(1+config.inflationRate/100, float64(fullYears))
+			cumulativeAnnualRentCosts += inflatedAnnualCost * float64(period.months%12) / 12.0
+		}
+
+		// Cumulative total includes deposit at start and recoverable at end
+		cumulativeTotal = config.rentDeposit + cumulativeMonthlyRent + cumulativeAnnualRentCosts - (config.rentDeposit * 0.75)
+
+		rows = append(rows, []string{
+			"SELL " + period.label,
+			formatCurrency(ye.monthlyRent),
+			formatCurrency(ye.rentCosts),
+			formatCurrency(ye.total),
+			formatCurrency(cumulativeTotal),
+		})
+	}
+
+	noteText := fmt.Sprintf("Note: Shows annual expenses for the specific year of each period. 'Monthly Rent' and 'Rent Costs' = Amounts for that year (inflated at %.1f%% annually). 'Total' = Sum for that year. 'Cumulative Total' = Running total including initial deposit (%s) and recoverable deposit (%s at end).",
+		config.inflationRate,
+		formatCurrency(config.rentDeposit),
+		formatCurrency(-config.rentDeposit*0.75))
+
+	displayTable("SELL EXPENSES BREAKDOWN", rows, noteText, false)
+}
+
+// displayKeepExpensesBreakdown displays breakdown of ownership expenses for KEEP scenario
+func displayKeepExpensesBreakdown() {
+	periods := getPeriods(config.totalMonths, config.include30Year > 0)
+
+	// Pre-calculate annual expenses for each year (0-30 years = 372 months to cover year 30 fully)
+	maxMonths := 372
+	type yearlyExpenses struct {
+		loanPayment float64
+		insurance   float64
+		otherCosts  float64 // Other annual costs + monthly expenses
+		total       float64
+	}
+
+	// Calculate expenses for each 12-month period
+	yearlyData := make([]yearlyExpenses, 31) // 0-30 years
+
+	currentInsurance := config.annualInsurance / 12
+	currentOtherCosts := config.annualTaxes / 12
+	currentMonthlyExp := config.monthlyExpenses
+
+	for year := 0; year < 31; year++ {
+		var ye yearlyExpenses
+
+		// Calculate for 12 months of this year
+		for month := 0; month < 12; month++ {
+			monthIndex := year*12 + month
+
+			if monthIndex >= maxMonths {
+				break
+			}
+
+			// Loan payment only during loan term
+			if monthIndex < config.totalMonths {
+				ye.loanPayment += config.monthlyLoanPayment
+			}
+
+			// Recurring expenses
+			ye.insurance += currentInsurance
+			ye.otherCosts += currentOtherCosts + currentMonthlyExp
+		}
+
+		ye.total = ye.loanPayment + ye.insurance + ye.otherCosts
+		yearlyData[year] = ye
+
+		// Apply inflation for next year
+		currentInsurance *= (1 + config.inflationRate/100)
+		currentOtherCosts *= (1 + config.inflationRate/100)
+		currentMonthlyExp *= (1 + config.inflationRate/100)
+	}
+
+	// Build table rows
+	rows := [][]string{
+		{"Period", "Loan Payment", "Tax/Insurance", "Other Costs", "Total", "Cumulative Total"},
+	}
+
+	// Build each data row
+	for _, period := range periods {
+		// Determine which year this period represents
+		years := period.months / 12
+		if years >= len(yearlyData) {
+			years = len(yearlyData) - 1
+		}
+
+		// Get annual expenses for this specific year
+		ye := yearlyData[years]
+
+		// Calculate cumulative total from start to this period
+		cumulativeTotal := 0.0
+		for i := 0; i < period.months; i++ {
+			cumulativeTotal += monthlyBuyingCosts[i]
+		}
+
+		rows = append(rows, []string{
+			"KEEP " + period.label,
+			formatCurrency(ye.loanPayment),
+			formatCurrency(ye.insurance),
+			formatCurrency(ye.otherCosts),
+			formatCurrency(ye.total),
+			formatCurrency(cumulativeTotal),
+		})
+	}
+
+	noteText := fmt.Sprintf("Note: Shows annual expenses for the specific year of each period. 'Loan Payment' = Loan payments for that year (fixed monthly amount, stops after loan term). 'Tax/Insurance' = Annual tax & insurance (inflated at %.1f%% annually). 'Other Costs' = Other annual costs + monthly expenses (inflated). 'Total' = Sum for that year. 'Cumulative Total' = Running total of all expenses from year 1.", config.inflationRate)
+
+	displayTable("KEEP EXPENSES BREAKDOWN", rows, noteText, false)
 }
 
 // displayExpenditureTable displays total expenditure for buying vs renting
