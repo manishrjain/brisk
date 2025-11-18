@@ -378,15 +378,12 @@ func getStringInputAndParse(prompt string, parser func(string) (int, error)) (in
 func displayTable(title string, rows [][]string, notes string, highlightLastRow bool) {
 	re := lipgloss.NewRenderer(os.Stdout)
 
-	// Title style (monokai pink)
-	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true)
+	// Title style
+	titleStyle := re.NewStyle().Foreground(MonokaiPink).Bold(true)
 
 	// Table styles
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240", // Dark gray for light backgrounds
-		Dark:  "255", // Bright white for dark backgrounds
-	})
+	headerStyle := re.NewStyle().Padding(0, 1).Foreground(MonokaiCyan).Bold(true)
+	rowStyle := re.NewStyle().Padding(0, 1).Foreground(MonokaiAdaptiveText)
 
 	// Print title
 	fmt.Println()
@@ -395,7 +392,7 @@ func displayTable(title string, rows [][]string, notes string, highlightLastRow 
 	// Create table
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
+		BorderStyle(re.NewStyle().Foreground(MonokaiBorder)).
 		Rows(rows...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			var style lipgloss.Style
@@ -418,7 +415,7 @@ func displayTable(title string, rows [][]string, notes string, highlightLastRow 
 
 	// Print notes if provided
 	if notes != "" {
-		noteStyle := re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
+		noteStyle := re.NewStyle().Width(100).Italic(true).Foreground(MonokaiGrey).PaddingLeft(2)
 		fmt.Println(noteStyle.Render(notes))
 	}
 }
@@ -627,16 +624,19 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 	includeSelling, agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax float64, md *MarketData) {
 
 	re := lipgloss.NewRenderer(os.Stdout)
-	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true) // Monokai pink
-	labelStyle := re.NewStyle().Foreground(lipgloss.Color("81"))             // Monokai blue/cyan
+	titleStyle := re.NewStyle().Foreground(MonokaiPink).Bold(true)
+	labelStyle := re.NewStyle().Foreground(MonokaiCyan)
+	groupStyle := re.NewStyle().Foreground(MonokaiOrange).Bold(true)
 
 	fmt.Println()
 	fmt.Println(titleStyle.Render("INPUT PARAMETERS"))
 
-	fmt.Println("\nECONOMIC ASSUMPTIONS")
+	fmt.Println()
+	fmt.Println(groupStyle.Render("ECONOMIC ASSUMPTIONS"))
 	fmt.Printf("  %s: %.2f%%\n", labelStyle.Render("Inflation Rate"), inflationRate)
 
-	fmt.Println("\nBUYING")
+	fmt.Println()
+	fmt.Println(groupStyle.Render("BUYING"))
 	fmt.Printf("  %s: %s\n", labelStyle.Render("Purchase Price"), formatCurrency(purchasePrice))
 	fmt.Printf("  %s: %s\n", labelStyle.Render("Downpayment"), formatCurrency(downpayment))
 	fmt.Printf("  %s: %s\n", labelStyle.Render("Loan Amount"), formatCurrency(loanAmount))
@@ -649,10 +649,10 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 	} else {
 		loanDurationStr = fmt.Sprintf("%d months", loanDuration)
 	}
-	fmt.Printf("  Loan Duration: %s\n", loanDurationStr)
-	fmt.Printf("  Annual Tax & Insurance: %s\n", formatCurrency(annualInsurance))
-	fmt.Printf("  Other Annual Costs: %s\n", formatCurrency(annualTaxes))
-	fmt.Printf("  Monthly Expenses: %s\n", formatCurrency(monthlyExpenses))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Loan Duration"), loanDurationStr)
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Annual Tax & Insurance"), formatCurrency(annualInsurance))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Other Annual Costs"), formatCurrency(annualTaxes))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Monthly Expenses"), formatCurrency(monthlyExpenses))
 
 	// Format appreciation rates
 	appreciationRateStr := ""
@@ -669,15 +669,16 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 		}
 		appreciationRateStr = strings.Join(rateStrs, ", ")
 	}
-	fmt.Printf("  Appreciation Rate: %s\n", appreciationRateStr)
-	fmt.Printf("  Total Monthly Cost: %s\n", formatCurrency(totalMonthlyBuyingCost))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Appreciation Rate"), appreciationRateStr)
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Total Monthly Cost"), formatCurrency(totalMonthlyBuyingCost))
 
-	fmt.Println("\nRENTING")
-	fmt.Printf("  Rental Deposit: %s\n", formatCurrency(rentDeposit))
-	fmt.Printf("  Monthly Rent: %s\n", formatCurrency(monthlyRent))
-	fmt.Printf("  Annual Rent Costs: %s\n", formatCurrency(annualRentCosts))
-	fmt.Printf("  Other Annual Costs: %s\n", formatCurrency(otherAnnualCosts))
-	fmt.Printf("  Investment Return Rate: %.2f%%\n", investmentReturnRate)
+	fmt.Println()
+	fmt.Println(groupStyle.Render("RENTING"))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Rental Deposit"), formatCurrency(rentDeposit))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Monthly Rent"), formatCurrency(monthlyRent))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Annual Rent Costs"), formatCurrency(annualRentCosts))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Other Annual Costs"), formatCurrency(otherAnnualCosts))
+	fmt.Printf("  %s: %.2f%%\n", labelStyle.Render("Investment Return Rate"), investmentReturnRate)
 
 	// Display market averages under investment return rate
 	if md != nil && len(md.VOO) > 0 {
@@ -688,18 +689,20 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 		}
 	}
 
-	fmt.Printf("  Total Monthly Cost: %s\n", formatCurrency(totalMonthlyRentingCost))
+	fmt.Printf("  %s: %s\n", labelStyle.Render("Total Monthly Cost"), formatCurrency(totalMonthlyRentingCost))
 
 	if includeSelling > 0 {
-		fmt.Println("\nSELLING")
-		fmt.Printf("  Include Selling Analysis: Yes\n")
-		fmt.Printf("  Agent Commission: %.2f%%\n", agentCommission)
-		fmt.Printf("  Staging/Selling Costs: %s\n", formatCurrency(stagingCosts))
-		fmt.Printf("  Tax-Free Gains Limit: %s\n", formatCurrency(taxFreeLimit))
-		fmt.Printf("  Capital Gains Tax Rate: %.2f%%\n", capitalGainsTax)
+		fmt.Println()
+		fmt.Println(groupStyle.Render("SELLING"))
+		fmt.Printf("  %s: Yes\n", labelStyle.Render("Include Selling Analysis"))
+		fmt.Printf("  %s: %.2f%%\n", labelStyle.Render("Agent Commission"), agentCommission)
+		fmt.Printf("  %s: %s\n", labelStyle.Render("Staging/Selling Costs"), formatCurrency(stagingCosts))
+		fmt.Printf("  %s: %s\n", labelStyle.Render("Tax-Free Gains Limit"), formatCurrency(taxFreeLimit))
+		fmt.Printf("  %s: %.2f%%\n", labelStyle.Render("Capital Gains Tax Rate"), capitalGainsTax)
 	} else {
-		fmt.Println("\nSELLING")
-		fmt.Printf("  Include Selling Analysis: No\n")
+		fmt.Println()
+		fmt.Println(groupStyle.Render("SELLING"))
+		fmt.Printf("  %s: No\n", labelStyle.Render("Include Selling Analysis"))
 	}
 }
 

@@ -32,11 +32,12 @@ type FormModel struct {
 }
 
 var (
-	focusedStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Bold(true)
-	blurredStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))  // White/bright
+	focusedStyle = lipgloss.NewStyle().Foreground(MonokaiPink).Bold(true)
+	blurredStyle = lipgloss.NewStyle().Foreground(MonokaiAdaptiveText)
 	cursorStyle  = focusedStyle.Copy()
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("34"))  // Green like title/groups
-	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("34"))
+	helpStyle    = lipgloss.NewStyle().Foreground(MonokaiGrey)
+	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(MonokaiPink)
+	groupStyle   = lipgloss.NewStyle().Bold(true).Foreground(MonokaiOrange)
 )
 
 // FieldGroup represents a group of related fields
@@ -115,6 +116,9 @@ func makeField(key, label, help string, defaults map[string]string) FormField {
 	ti.Placeholder = "0"
 	ti.CharLimit = 32
 	ti.Width = 30  // Fixed width to prevent jumping
+	ti.Prompt = ""  // Disable built-in prompt, we'll use our own caret in the label
+	ti.TextStyle = lipgloss.NewStyle().Foreground(MonokaiAdaptiveText)
+	ti.Cursor.Style = focusedStyle
 
 	if val, ok := defaults[key]; ok {
 		ti.SetValue(val)
@@ -229,7 +233,6 @@ func (m FormModel) View() string {
 	// Render each group
 	for groupIdx, group := range m.groups {
 		// Group header
-		groupStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("34")).Bold(true)
 		b.WriteString(groupStyle.Render("  " + group.Name))
 		b.WriteString("\n")
 
@@ -237,14 +240,6 @@ func (m FormModel) View() string {
 		for i := 0; i < len(group.Fields); i++ {
 			currentFieldIndex := fieldIndex + i
 			field := m.fields[currentFieldIndex]
-
-			// Render label with fixed width
-			var labelText string
-			if currentFieldIndex == m.currentField {
-				labelText = fmt.Sprintf("%-50s", "❯ "+field.Label)
-			} else {
-				labelText = fmt.Sprintf("%-50s", "  "+field.Label)
-			}
 
 			// Render input or toggle
 			var input string
@@ -260,11 +255,25 @@ func (m FormModel) View() string {
 
 			// Print label and input on same line with matching colors
 			if currentFieldIndex == m.currentField {
+				// Focused: entire line is pink with caret
+				labelText := fmt.Sprintf("%-50s", "❯ "+field.Label)
 				b.WriteString(focusedStyle.Render(labelText))
-				b.WriteString(focusedStyle.Render(input))
+				if field.IsToggle {
+					b.WriteString(focusedStyle.Render(input))
+				} else {
+					b.WriteString(focusedStyle.Render("> "))
+					b.WriteString(focusedStyle.Render(input))
+				}
 			} else {
+				// Not focused: no caret on label, but caret before input value
+				labelText := fmt.Sprintf("%-50s", "  "+field.Label)
 				b.WriteString(blurredStyle.Render(labelText))
-				b.WriteString(blurredStyle.Render(input))
+				if field.IsToggle {
+					b.WriteString(blurredStyle.Render(input))
+				} else {
+					b.WriteString(blurredStyle.Render("> "))
+					b.WriteString(input)
+				}
 			}
 			b.WriteString("\n")
 

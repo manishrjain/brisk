@@ -390,12 +390,9 @@ func displayMarketData(md *MarketData) {
 
 	// Display using same pattern as other tables
 	re := lipgloss.NewRenderer(os.Stdout)
-	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true)
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true)
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240",
-		Dark:  "255",
-	})
+	titleStyle := re.NewStyle().Foreground(MonokaiPink).Bold(true)
+	headerStyle := re.NewStyle().Padding(0, 1).Foreground(MonokaiCyan).Bold(true)
+	rowStyle := re.NewStyle().Padding(0, 1).Foreground(MonokaiAdaptiveText)
 
 	// Print title
 	fmt.Println()
@@ -404,7 +401,7 @@ func displayMarketData(md *MarketData) {
 	// Create table
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
+		BorderStyle(re.NewStyle().Foreground(MonokaiBorder)).
 		Rows(rows...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			var style lipgloss.Style
