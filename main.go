@@ -245,52 +245,20 @@ func main() {
 	displayMarketData(marketData)
 
 	// Display projections
-	re := lipgloss.NewRenderer(os.Stdout)
-	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true) // Monokai pink
-	fmt.Println()
-	fmt.Println(titleStyle.Render("TOTAL EXPENDITURE COMPARISON"))
-	displayExpenditureTable(downpayment, totalMonths, rentDeposit, include30Year)
-
-	// Format note with auto-wrapping
-	noteStyle := re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
-	fmt.Println(noteStyle.Render(fmt.Sprintf("Note: All recurring costs (insurance, taxes, rent, HOA, etc.) are inflated annually at %.1f%% rate.", inflationRate)))
+	displayExpenditureTable(downpayment, totalMonths, rentDeposit, include30Year, inflationRate)
 
 	if loanAmount > 0 {
-		fmt.Println()
-		fmt.Println(titleStyle.Render("LOAN AMORTIZATION DETAILS"))
 		displayAmortizationTable(loanAmount, totalMonths, include30Year)
-
-		noteStyle = re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
-		fmt.Println(noteStyle.Render("Note: Monthly payment is fixed. Each payment covers interest on remaining balance, with the rest going to principal. Early payments are mostly interest."))
 	}
 
 	if includeSelling > 0 {
-		fmt.Println()
-		fmt.Println(titleStyle.Render("SALE PROCEEDS ANALYSIS"))
 		displaySaleProceeds(purchasePrice, downpayment, totalMonths,
 			agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax, include30Year)
-
-		noteStyle = re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
-		fmt.Println(noteStyle.Render("Note: Appreciation rates are applied year-by-year (compounded). If multiple rates are specified (e.g., '-20,-10,-5'), first rate applies to year 1, second to year 2, etc. The last rate applies to all remaining years. Sale price = compounded property value."))
 	}
 
-	fmt.Println()
-	fmt.Println(titleStyle.Render("NET WORTH PROJECTIONS: BUY VS RENT"))
 	displayComparisonTable(purchasePrice, downpayment, totalMonths,
 		rentDeposit, investmentReturnRate, include30Year, includeSelling,
 		agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax)
-
-	// Build note text with conditional buying NW explanation
-	noteText := fmt.Sprintf("Note: 'Cumul. Savings' = raw difference in costs (Buying - Renting) without investment growth. See Total Expenditure Comparison.\n\n'Market Return' = investment growth using monthly dollar-cost averaging at %.0f%% annual rate. Each month's savings are invested immediately and compounded monthly. This models realistic investing behavior (not lump sum at year start), so effective return < annual rate for short periods.\n\n'Renting NW' = Cumul. Savings + Market Return + 75%% recoverable deposit. ", investmentReturnRate)
-	if includeSelling > 0 {
-		noteText += "'Buying NW' = Net proceeds after selling (sale price - selling costs - loan payoff - taxes). "
-	} else {
-		noteText += "'Buying NW' = Asset value - remaining loan balance. "
-	}
-	noteText += "'RENT - BUY': Positive values mean renting wins, negative values mean buying wins."
-
-	noteStyle = re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
-	fmt.Println(noteStyle.Render(noteText))
 }
 
 // getFloatValue gets a float value from currentInputs
@@ -404,6 +372,55 @@ func getStringInputAndParse(prompt string, parser func(string) (int, error)) (in
 	fmt.Print(prompt)
 	input, _ := reader.ReadString('\n')
 	return parser(strings.TrimSpace(input))
+}
+
+// displayTable displays a formatted table with title and optional notes
+func displayTable(title string, rows [][]string, notes string, highlightLastRow bool) {
+	re := lipgloss.NewRenderer(os.Stdout)
+
+	// Title style (monokai pink)
+	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true)
+
+	// Table styles
+	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
+	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
+		Light: "240", // Dark gray for light backgrounds
+		Dark:  "255", // Bright white for dark backgrounds
+	})
+
+	// Print title
+	fmt.Println()
+	fmt.Println(titleStyle.Render(title))
+
+	// Create table
+	t := table.New().
+		Border(lipgloss.NormalBorder()).
+		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
+		Rows(rows...).
+		StyleFunc(func(row, col int) lipgloss.Style {
+			var style lipgloss.Style
+			if row == 0 || (highlightLastRow && row == len(rows)-1) {
+				// Header row and optionally last row
+				style = headerStyle
+			} else {
+				style = rowStyle
+			}
+
+			// Right-align all number columns (col > 0)
+			if col > 0 {
+				style = style.Align(lipgloss.Right)
+			}
+
+			return style
+		})
+
+	fmt.Println(t)
+
+	// Print notes if provided
+	if notes != "" {
+		noteStyle := re.NewStyle().Width(100).Italic(true).Foreground(lipgloss.Color("#C1C0C0")).PaddingLeft(2)
+		fmt.Println(noteStyle.Render(notes))
+	}
 }
 
 // formatCurrency formats a number as currency with K/M suffixes (compact) or full format
@@ -689,10 +706,12 @@ func displayInputParameters(inflationRate, purchasePrice, downpayment, loanAmoun
 func displayAmortizationTable(loanAmount float64, loanDuration int, include30Year float64) {
 	periods := getPeriods(loanDuration, include30Year > 0)
 
-	// Build table rows
-	rows := [][]string{}
+	// Build table rows (header + data)
+	rows := [][]string{
+		{"Period", "Principal Paid", "Interest Paid", "Loan Balance"},
+	}
 
-	// Build each row
+	// Build each data row
 	for _, period := range periods {
 		monthIndex := period.months - 1
 		if monthIndex >= len(remainingLoanBalance) {
@@ -711,50 +730,21 @@ func displayAmortizationTable(loanAmount float64, loanDuration int, include30Yea
 		})
 	}
 
-	// Create and style the table
-	re := lipgloss.NewRenderer(os.Stdout)
-
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240",
-		Dark:  "255",
-	})
-
-	allRows := append([][]string{
-		{"Period", "Principal Paid", "Interest Paid", "Loan Balance"},
-	}, rows...)
-
-	t := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
-		Rows(allRows...).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			var style lipgloss.Style
-			if row == 0 {
-				style = headerStyle
-			} else {
-				style = rowStyle
-			}
-
-			if col > 0 {
-				style = style.Align(lipgloss.Right)
-			}
-
-			return style
-		})
-
-	fmt.Println(t)
+	notes := "Note: Monthly payment is fixed. Each payment covers interest on remaining balance, with the rest going to principal. Early payments are mostly interest."
+	displayTable("LOAN AMORTIZATION DETAILS", rows, notes, false)
 }
 
 // displayExpenditureTable displays total expenditure for buying vs renting
 // Uses global monthlyBuyingCosts and monthlyRentingCosts arrays
-func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit float64, include30Year float64) {
+func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit float64, include30Year float64, inflationRate float64) {
 	periods := getPeriods(loanDuration, include30Year > 0)
 
-	// Build table rows
-	rows := [][]string{}
+	// Build table rows (header + data)
+	rows := [][]string{
+		{"Period", "Buying Expend.", "Renting Expend.", "Difference"},
+	}
 
-	// Print each row
+	// Add data rows
 	for _, period := range periods {
 		// Calculate total buying expenditure (downpayment + all monthly costs)
 		buyingExpenditure := downpayment
@@ -778,39 +768,8 @@ func displayExpenditureTable(downpayment float64, loanDuration int, rentDeposit 
 		})
 	}
 
-	// Create and style the table
-	re := lipgloss.NewRenderer(os.Stdout)
-
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240",
-		Dark:  "255",
-	})
-
-	allRows := append([][]string{
-		{"Period", "Buying Expend.", "Renting Expend.", "Difference"},
-	}, rows...)
-
-	t := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
-		Rows(allRows...).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			var style lipgloss.Style
-			if row == 0 {
-				style = headerStyle
-			} else {
-				style = rowStyle
-			}
-
-			if col > 0 {
-				style = style.Align(lipgloss.Right)
-			}
-
-			return style
-		})
-
-	fmt.Println(t)
+	notes := fmt.Sprintf("Note: All recurring costs (insurance, taxes, rent, HOA, etc.) are inflated annually at %.1f%% rate.", inflationRate)
+	displayTable("TOTAL EXPENDITURE COMPARISON", rows, notes, false)
 }
 
 // displayComparisonTable displays buy vs rent net worth projections side-by-side
@@ -820,10 +779,12 @@ func displayComparisonTable(purchasePrice, downpayment float64, loanDuration int
 	agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax float64) {
 	periods := getPeriods(loanDuration, include30Year > 0)
 
-	// Build table rows
-	rows := [][]string{}
+	// Build table rows (header + data)
+	rows := [][]string{
+		{"Period", "Asset Value", "Buying NW", "Cumul. Savings", "Market Return", "Renting NW", "RENT - BUY"},
+	}
 
-	// Build each row
+	// Build each data row
 	for _, period := range periods {
 		assetValue, _, buyingNetWorth := calculateNetWorth(
 			period.months, purchasePrice, downpayment, includeSelling,
@@ -857,39 +818,16 @@ func displayComparisonTable(purchasePrice, downpayment float64, loanDuration int
 		})
 	}
 
-	// Create and style the table
-	re := lipgloss.NewRenderer(os.Stdout)
+	// Build note text with conditional buying NW explanation
+	noteText := fmt.Sprintf("Note: 'Cumul. Savings' = raw difference in costs (Buying - Renting) without investment growth. See Total Expenditure Comparison.\n\n'Market Return' = investment growth using monthly dollar-cost averaging at %.0f%% annual rate. Each month's savings are invested immediately and compounded monthly. This models realistic investing behavior (not lump sum at year start), so effective return < annual rate for short periods.\n\n'Renting NW' = Cumul. Savings + Market Return + 75%% recoverable deposit. ", investmentReturnRate)
+	if includeSelling > 0 {
+		noteText += "'Buying NW' = Net proceeds after selling (sale price - selling costs - loan payoff - taxes). "
+	} else {
+		noteText += "'Buying NW' = Asset value - remaining loan balance. "
+	}
+	noteText += "'RENT - BUY': Positive values mean renting wins, negative values mean buying wins."
 
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240",
-		Dark:  "255",
-	})
-
-	allRows := append([][]string{
-		{"Period", "Asset Value", "Buying NW", "Cumul. Savings", "Market Return", "Renting NW", "RENT - BUY"},
-	}, rows...)
-
-	t := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
-		Rows(allRows...).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			var style lipgloss.Style
-			if row == 0 {
-				style = headerStyle
-			} else {
-				style = rowStyle
-			}
-
-			if col > 0 {
-				style = style.Align(lipgloss.Right)
-			}
-
-			return style
-		})
-
-	fmt.Println(t)
+	displayTable("NET WORTH PROJECTIONS: BUY VS RENT", rows, noteText, false)
 }
 
 // calculateSaleProceeds calculates the net proceeds from selling at a given time
@@ -951,10 +889,12 @@ func displaySaleProceeds(purchasePrice, downpayment float64, loanDuration int,
 	agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax float64, include30Year float64) {
 	periods := getPeriods(loanDuration, include30Year > 0)
 
-	// Build table rows
-	rows := [][]string{}
+	// Build table rows (header + data)
+	rows := [][]string{
+		{"Period", "Sale Price", "Selling Cost", "Loan Payoff", "Capital Gain", "Tax on Gain", "Net Proceeds"},
+	}
 
-	// Build each row
+	// Build each data row
 	for _, period := range periods {
 		salePrice, totalSellingCosts, loanPayoff, capitalGains, taxOnGains, netProceeds := calculateSaleProceeds(
 			period.months, purchasePrice, agentCommission, stagingCosts, taxFreeLimit, capitalGainsTax)
@@ -970,39 +910,8 @@ func displaySaleProceeds(purchasePrice, downpayment float64, loanDuration int,
 		})
 	}
 
-	// Create and style the table
-	re := lipgloss.NewRenderer(os.Stdout)
-
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240",
-		Dark:  "255",
-	})
-
-	allRows := append([][]string{
-		{"Period", "Sale Price", "Selling Cost", "Loan Payoff", "Capital Gain", "Tax on Gain", "Net Proceeds"},
-	}, rows...)
-
-	t := table.New().
-		Border(lipgloss.NormalBorder()).
-		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
-		Rows(allRows...).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			var style lipgloss.Style
-			if row == 0 {
-				style = headerStyle
-			} else {
-				style = rowStyle
-			}
-
-			if col > 0 {
-				style = style.Align(lipgloss.Right)
-			}
-
-			return style
-		})
-
-	fmt.Println(t)
+	notes := "Note: Appreciation rates are applied year-by-year (compounded). If multiple rates are specified (e.g., '-20,-10,-5'), first rate applies to year 1, second to year 2, etc. The last rate applies to all remaining years. Sale price = compounded property value."
+	displayTable("SALE PROCEEDS ANALYSIS", rows, notes, false)
 }
 
 // displayNetWorthTable displays net worth projections in a table format

@@ -330,12 +330,6 @@ func calculateMarketAverages(md *MarketData) (voo, qqq, vti, bnd, mix6040 float6
 
 // displayMarketData shows historical returns and averages
 func displayMarketData(md *MarketData) {
-	re := lipgloss.NewRenderer(os.Stdout)
-	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true) // Monokai pink
-
-	fmt.Println()
-	fmt.Println(titleStyle.Render("MARKET DATA"))
-
 	// Get sorted years
 	years := make([]string, 0)
 	for year := range md.VOO {
@@ -347,8 +341,10 @@ func displayMarketData(md *MarketData) {
 	}
 	sort.Strings(years)
 
-	// Build table rows
-	rows := [][]string{}
+	// Build table rows (header + data)
+	rows := [][]string{
+		{"Period", "VOO", "QQQ", "VTI", "BND", "60/40 Mix"},
+	}
 
 	var vooSum, qqqSum, vtiSum, bndSum float64
 	count := 0
@@ -392,26 +388,27 @@ func displayMarketData(md *MarketData) {
 		})
 	}
 
-	// Create and style the table (re-use existing renderer from title)
-	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true) // Monokai cyan
-	// Use adaptive color: bright white on dark backgrounds, dark gray on light backgrounds
+	// Display using same pattern as other tables
+	re := lipgloss.NewRenderer(os.Stdout)
+	titleStyle := re.NewStyle().Foreground(lipgloss.Color("197")).Bold(true)
+	headerStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.Color("81")).Bold(true)
 	rowStyle := re.NewStyle().Padding(0, 1).Foreground(lipgloss.AdaptiveColor{
-		Light: "240", // Dark gray for light backgrounds
-		Dark:  "255", // Bright white for dark backgrounds
+		Light: "240",
+		Dark:  "255",
 	})
 
-	// Insert header as first row with special styling
-	allRows := append([][]string{
-		{"Period", "VOO", "QQQ", "VTI", "BND", "60/40 Mix"},
-	}, rows...)
+	// Print title
+	fmt.Println()
+	fmt.Println(titleStyle.Render("MARKET DATA"))
 
+	// Create table
 	t := table.New().
 		Border(lipgloss.NormalBorder()).
 		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
-		Rows(allRows...).
+		Rows(rows...).
 		StyleFunc(func(row, col int) lipgloss.Style {
 			var style lipgloss.Style
-			if row == 0 || row == len(allRows)-1 {
+			if row == 0 || row == len(rows)-1 {
 				// Header row and average row (last row)
 				style = headerStyle
 			} else {
