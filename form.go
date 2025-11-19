@@ -20,16 +20,29 @@ type FormField struct {
 	Toggled  bool
 }
 
+// DialogMode represents the current dialog state
+type DialogMode int
+
+const (
+	ModeNormal DialogMode = iota
+	ModeSaveDialog
+	ModeLoadDialog
+)
+
 // FormModel is the bubbletea model for the interactive form
 type FormModel struct {
-	fieldsMap    map[string]*FormField  // All unique fields by key
-	fields       []*FormField           // Flattened array for navigation (points to fieldsMap entries)
-	groups       []FieldGroup
-	currentField int
-	submitted    bool
-	values       map[string]string
-	err          error
-	marketData   *MarketData
+	fieldsMap     map[string]*FormField  // All unique fields by key
+	fields        []*FormField           // Flattened array for navigation (points to fieldsMap entries)
+	groups        []FieldGroup
+	currentField  int
+	submitted     bool
+	values        map[string]string
+	err           error
+	marketData    *MarketData
+	dialogMode    DialogMode
+	dialogInput   textinput.Model
+	profileList   []string
+	selectedProfile int
 }
 
 var (
@@ -267,9 +280,47 @@ func (m FormModel) isFieldVisible(fieldIndex int) bool {
 func (m FormModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Handle dialog modes
+		if m.dialogMode == ModeSaveDialog {
+			return m.handleSaveDialog(msg)
+		} else if m.dialogMode == ModeLoadDialog {
+			return m.handleLoadDialog(msg)
+		}
+
+		// Normal mode key handling
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "ctrl+c":
 			return m, tea.Quit
+
+		case "esc":
+			// If in a dialog, close it; otherwise quit
+			if m.dialogMode != ModeNormal {
+				m.dialogMode = ModeNormal
+				return m, nil
+			}
+			return m, tea.Quit
+
+		case "ctrl+s":
+			// Open save dialog
+			m.dialogMode = ModeSaveDialog
+			m.dialogInput = textinput.New()
+			m.dialogInput.Placeholder = "profile-name"
+			m.dialogInput.Focus()
+			m.dialogInput.CharLimit = 50
+			m.dialogInput.Width = 40
+			return m, nil
+
+		case "ctrl+o":
+			// Open load dialog
+			profiles, err := listProfiles()
+			if err != nil {
+				// Ignore error, show empty list
+				profiles = []string{}
+			}
+			m.dialogMode = ModeLoadDialog
+			m.profileList = profiles
+			m.selectedProfile = 0
+			return m, nil
 
 		case "ctrl+t":
 			// Toggle between scenarios
@@ -477,8 +528,172 @@ func (m FormModel) View() string {
 	b.WriteString("\n\n")
 
 	// Navigation help
-	b.WriteString(helpStyle.Render("  ↑/↓: Navigate  Space/Enter: Toggle  Ctrl+T: Switch Scenario  Ctrl+K: Calculate  Ctrl+C/Esc: Quit"))
+	b.WriteString(helpStyle.Render("  ↑/↓: Navigate  Space/Enter: Toggle  Ctrl+T: Switch Scenario  Ctrl+S: Save  Ctrl+O: Load  Ctrl+K: Calculate  Ctrl+C/Esc: Quit"))
 	b.WriteString("\n")
+
+	// Show dialog overlays
+	result := b.String()
+	if m.dialogMode == ModeSaveDialog {
+		result += m.renderSaveDialog()
+	} else if m.dialogMode == ModeLoadDialog {
+		result += m.renderLoadDialog()
+	}
+
+	return result
+}
+
+// handleSaveDialog handles key presses in save dialog mode
+func (m FormModel) handleSaveDialog(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		// Cancel save dialog
+		m.dialogMode = ModeNormal
+		return m, nil
+
+	case "enter":
+		// Save profile with entered name
+		profileName := strings.TrimSpace(m.dialogInput.Value())
+		if profileName == "" {
+			// Just close dialog if empty
+			m.dialogMode = ModeNormal
+			return m, nil
+		}
+
+		// Collect current form values
+		values := make(map[string]string)
+		for _, field := range m.fields {
+			if field.IsToggle {
+				if field.Toggled {
+					values[field.Key] = "1"
+				} else {
+					values[field.Key] = "0"
+				}
+			} else {
+				values[field.Key] = field.Input.Value()
+			}
+		}
+
+		// Save profile
+		if err := saveProfile(profileName, values); err != nil {
+			// Could show error, but for now just close
+			m.dialogMode = ModeNormal
+			return m, nil
+		}
+
+		// Close dialog
+		m.dialogMode = ModeNormal
+		return m, nil
+	}
+
+	// Update the input field
+	var cmd tea.Cmd
+	m.dialogInput, cmd = m.dialogInput.Update(msg)
+	return m, cmd
+}
+
+// handleLoadDialog handles key presses in load dialog mode
+func (m FormModel) handleLoadDialog(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		// Cancel load dialog
+		m.dialogMode = ModeNormal
+		return m, nil
+
+	case "up", "k":
+		if m.selectedProfile > 0 {
+			m.selectedProfile--
+		}
+		return m, nil
+
+	case "down", "j":
+		if m.selectedProfile < len(m.profileList)-1 {
+			m.selectedProfile++
+		}
+		return m, nil
+
+	case "enter":
+		// Load selected profile
+		if len(m.profileList) == 0 || m.selectedProfile >= len(m.profileList) {
+			m.dialogMode = ModeNormal
+			return m, nil
+		}
+
+		profileName := m.profileList[m.selectedProfile]
+		values, err := loadProfile(profileName)
+		if err != nil {
+			// Just close dialog on error
+			m.dialogMode = ModeNormal
+			return m, nil
+		}
+
+		// Update all fields with loaded values
+		for _, field := range m.fields {
+			if val, ok := values[field.Key]; ok {
+				if field.IsToggle {
+					field.Toggled = (val == "1" || val == "yes" || val == "true")
+				} else {
+					field.Input.SetValue(val)
+				}
+			}
+		}
+
+		// Close dialog
+		m.dialogMode = ModeNormal
+		return m, nil
+	}
+
+	return m, nil
+}
+
+// renderSaveDialog renders the save profile dialog
+func (m FormModel) renderSaveDialog() string {
+	var b strings.Builder
+	b.WriteString("\n")
+
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(MonokaiPink).
+		Padding(1, 2).
+		Width(50)
+
+	b.WriteString(boxStyle.Render(
+		titleStyle.Render("Save Profile") + "\n\n" +
+			"Enter profile name:\n" +
+			m.dialogInput.View() + "\n\n" +
+			helpStyle.Render("Enter: Save  Esc: Cancel"),
+	))
+
+	return b.String()
+}
+
+// renderLoadDialog renders the load profile dialog
+func (m FormModel) renderLoadDialog() string {
+	var b strings.Builder
+	b.WriteString("\n")
+
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(MonokaiPink).
+		Padding(1, 2).
+		Width(50)
+
+	content := titleStyle.Render("Load Profile") + "\n\n"
+
+	if len(m.profileList) == 0 {
+		content += helpStyle.Render("No saved profiles found.\n\nEsc: Cancel")
+	} else {
+		content += "Select a profile:\n\n"
+		for i, profile := range m.profileList {
+			if i == m.selectedProfile {
+				content += focusedStyle.Render("► "+profile) + "\n"
+			} else {
+				content += blurredStyle.Render("  "+profile) + "\n"
+			}
+		}
+		content += "\n" + helpStyle.Render("↑/↓: Navigate  Enter: Load  Esc: Cancel")
+	}
+
+	b.WriteString(boxStyle.Render(content))
 
 	return b.String()
 }

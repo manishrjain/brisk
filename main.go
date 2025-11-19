@@ -90,19 +90,21 @@ func main() {
 		}
 	}
 
-	// Load previous inputs
+	// Load previous inputs (for --defaults flag backward compatibility)
 	savedDefaults = loadInputs()
 	currentInputs = make(map[string]string)
 
 	// If not using defaults, show interactive form
 	if !useDefaults {
+		// Show interactive form with last saved defaults
 		values, err := RunInteractiveForm(savedDefaults, marketData)
 		if err != nil {
 			fmt.Println("Form cancelled or error:", err)
 			return
 		}
 		currentInputs = values
-		// Save the inputs for next time
+
+		// Save the inputs for next time (backward compatibility)
 		saveInputs(currentInputs)
 	} else {
 		// Check if we have defaults when --defaults flag is used
