@@ -269,11 +269,11 @@
             <tr>
               <th>Period</th>
               <th class="text-right">Asset Value</th>
-              <th class="text-right">Buying NW</th>
+              <th class="text-right text-monokai-pink">Buying NW</th>
               <th class="text-right">Cum Savings</th>
               <th class="text-right">Market Return</th>
-              <th class="text-right">Renting NW</th>
-              <th class="text-right">RENT - BUY</th>
+              <th class="text-right text-monokai-green">Renting NW</th>
+              <th class="text-right"><span class="text-monokai-green">RENT</span> - <span class="text-monokai-pink">BUY</span></th>
             </tr>
           </thead>
           <tbody>
@@ -281,11 +281,11 @@
               <tr>
                 <td class="font-mono">{row.period}</td>
                 <td class="text-right font-mono">{formatCurrency(row.assetValue)}</td>
-                <td class="text-right font-mono">{formatCurrency(row.buyingNetWorth)}</td>
+                <td class="text-right font-mono text-monokai-pink">{formatCurrency(row.buyingNetWorth)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.cumulativeSavings)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.marketReturn)}</td>
-                <td class="text-right font-mono">{formatCurrency(row.rentingNetWorth)}</td>
-                <td class="text-right font-mono" class:text-monokai-green={row.difference < 0} class:text-monokai-pink={row.difference > 0}>
+                <td class="text-right font-mono text-monokai-green">{formatCurrency(row.rentingNetWorth)}</td>
+                <td class="text-right font-mono" class:text-monokai-green={row.difference > 0} class:text-monokai-pink={row.difference < 0}>
                   {formatCurrency(row.difference)}
                 </td>
               </tr>
@@ -313,10 +313,10 @@
               {#if inputs.includeRentingSell}
                 <th class="text-right">SELL Cum. Exp</th>
               {/if}
-              <th class="text-right">SELL Net Worth</th>
+              <th class="text-right text-monokai-pink">SELL Net Worth</th>
               <th class="text-right">KEEP Net Position</th>
-              <th class="text-right">KEEP Net Proceeds</th>
-              <th class="text-right">KEEP - SELL</th>
+              <th class="text-right text-monokai-green">KEEP Net Proceeds</th>
+              <th class="text-right"><span class="text-monokai-green">KEEP</span> - <span class="text-monokai-pink">SELL</span></th>
             </tr>
           </thead>
           <tbody>
@@ -326,9 +326,9 @@
                 {#if row.sellCumulativeExpenses !== undefined}
                   <td class="text-right font-mono">{formatCurrency(row.sellCumulativeExpenses)}</td>
                 {/if}
-                <td class="text-right font-mono">{formatCurrency(row.sellNetWorth)}</td>
+                <td class="text-right font-mono text-monokai-pink">{formatCurrency(row.sellNetWorth)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.keepNetPosition)}</td>
-                <td class="text-right font-mono">{formatCurrency(row.keepNetProceeds)}</td>
+                <td class="text-right font-mono text-monokai-green">{formatCurrency(row.keepNetProceeds)}</td>
                 <td class="text-right font-mono" class:text-monokai-green={row.difference > 0} class:text-monokai-pink={row.difference < 0}>
                   {formatCurrency(row.difference)}
                 </td>

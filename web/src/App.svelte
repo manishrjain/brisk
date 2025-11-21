@@ -37,6 +37,14 @@
   let calculatedInputs: CalculatorInputs | null = null;
   let showResults = false;
 
+  function handleGlobalKeyDown(event: KeyboardEvent) {
+    // Handle Escape key to go back from results
+    if (event.key === 'Escape' && showResults) {
+      event.preventDefault();
+      handleReset();
+    }
+  }
+
   onMount(() => {
     // Load saved inputs from localStorage
     const saved = localStorage.getItem('rentobuy_inputs');
@@ -64,6 +72,13 @@
         console.error('Failed to load saved inputs:', e);
       }
     }
+
+    // Add global keyboard handler
+    window.addEventListener('keydown', handleGlobalKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    };
   });
 
   // Update body overflow based on whether we're showing results
@@ -71,6 +86,13 @@
     if (typeof document !== 'undefined') {
       if (showResults) {
         document.body.style.overflow = 'auto';
+        // Scroll to bottom after results are rendered
+        setTimeout(() => {
+          window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+          });
+        }, 100);
       } else {
         document.body.style.overflow = 'hidden';
       }

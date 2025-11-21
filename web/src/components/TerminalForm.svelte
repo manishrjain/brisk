@@ -54,12 +54,19 @@
       { key: 'otherAnnualCosts', label: 'Other Annual Costs', help: 'Additional yearly costs for renting', placeholder: '500', visible: () => formInputs.scenario === 'buy_vs_rent' },
 
       { key: 'header_selling', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: 'SELLING' },
-      { key: 'includeSelling', label: 'Include Selling Analysis', help: 'Toggle to enable/disable selling analysis', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'] },
+      { key: 'includeSelling', label: 'Include Selling Analysis', help: 'Toggle to enable/disable selling analysis', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'], disabled: () => formInputs.scenario === 'sell_vs_keep' },
       { key: 'agentCommission', label: 'Agent Commission (%)', help: 'Percentage of sale price paid to agents', placeholder: '6', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
       { key: 'stagingCosts', label: 'Staging/Selling Costs', help: 'Fixed costs to prepare and sell', placeholder: '10K', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
       { key: 'taxFreeLimits', label: 'Tax-Free Gains Limit', help: 'Capital gains exempt from tax. Comma-separated for different years (e.g., \'500K,0K\' = 500K year 1, 0 year 2+)', placeholder: '250K', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
       { key: 'capitalGainsTax', label: 'Capital Gains Tax (%)', help: 'Long-term capital gains tax rate', placeholder: '20', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
     ];
+  }
+
+  // Auto-set includeSelling to 'yes' in sell_vs_keep scenario
+  $: {
+    if (formInputs.scenario === 'sell_vs_keep') {
+      formInputs.includeSelling = 'yes';
+    }
   }
 
   $: visibleFields = fields.filter(f => f.visible());
@@ -109,6 +116,12 @@
   }
 
   function moveToNextField() {
+    // Validate current field before moving
+    const currentField = visibleFields[currentFieldIndex];
+    if (currentField && !currentField.isHeader) {
+      validateAndResetField(currentField);
+    }
+
     let nextIndex = currentFieldIndex + 1;
     // Skip headers and disabled fields
     while (nextIndex < visibleFields.length && (visibleFields[nextIndex].isHeader || (visibleFields[nextIndex].disabled && visibleFields[nextIndex].disabled()))) {
@@ -121,6 +134,12 @@
   }
 
   function moveToPreviousField() {
+    // Validate current field before moving
+    const currentField = visibleFields[currentFieldIndex];
+    if (currentField && !currentField.isHeader) {
+      validateAndResetField(currentField);
+    }
+
     let prevIndex = currentFieldIndex - 1;
     // Skip headers and disabled fields
     while (prevIndex >= 0 && (visibleFields[prevIndex].isHeader || (visibleFields[prevIndex].disabled && visibleFields[prevIndex].disabled()))) {
@@ -191,6 +210,57 @@
     focusCurrentField();
   }
 
+  function validateAndResetField(field: FormField) {
+    // Skip validation for toggle fields
+    if (field.toggleValues) {
+      return;
+    }
+
+    const value = formInputs[field.key];
+
+    // Skip empty values
+    if (!value || value.trim() === '') {
+      return;
+    }
+
+    // Fields that use parseDuration
+    const durationFields = ['loanTerm', 'remainingLoanTerm'];
+    if (durationFields.includes(field.key)) {
+      try {
+        parseDuration(value);
+      } catch (error) {
+        formInputs[field.key] = '0';
+      }
+      return;
+    }
+
+    // Fields that use parseAppreciationRates (comma-separated)
+    const arrayFields = ['appreciationRate', 'taxFreeLimits'];
+    if (arrayFields.includes(field.key)) {
+      // Check if input contains at least one digit
+      if (!/\d/.test(value)) {
+        formInputs[field.key] = '0';
+      }
+      return;
+    }
+
+    // Fields that use parseFloat (percentages)
+    const percentFields = ['inflationRate', 'investmentReturnRate', 'loanRate', 'agentCommission', 'capitalGainsTax'];
+    if (percentFields.includes(field.key)) {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed)) {
+        formInputs[field.key] = '0';
+      }
+      return;
+    }
+
+    // All other fields use parseAmount (currency fields)
+    // Check if the input contains at least one digit
+    if (!/\d/.test(value)) {
+      formInputs[field.key] = '0';
+    }
+  }
+
   function handleGlobalKeyDown(event: KeyboardEvent) {
     // Capture arrow keys globally to prevent page scrolling
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -246,6 +316,7 @@
                 bind:this={inputRefs[index]}
                 on:keydown={handleKeyDown}
                 on:focus={() => handleFieldFocus(index)}
+                on:blur={() => validateAndResetField(field)}
                 placeholder={field.placeholder}
                 class="terminal-input w-full"
                 disabled={field.disabled && field.disabled()}
