@@ -46,215 +46,231 @@
   }
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-8">
+<form on:submit|preventDefault={handleSubmit} class="space-y-6 max-w-5xl mx-auto">
   <!-- Scenario Selection -->
-  <section class="bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="group-title">Scenario Selection</h2>
-    <div class="flex gap-4">
-      <label class="flex items-center gap-2 cursor-pointer">
+  <section class="form-section">
+    <h2 class="group-title">
+      Scenario Selection
+    </h2>
+    <div class="flex gap-4 flex-wrap">
+      <label class="flex-1 min-w-[200px]">
         <input
           type="radio"
           name="scenario"
           value="buy_vs_rent"
           bind:group={formInputs.scenario}
-          class="w-4 h-4 text-monokai-pink"
+          class="peer sr-only"
         />
-        <span>BUY vs RENT</span>
+        <div class="px-6 py-4 rounded-lg border-2 border-monokai-border cursor-pointer transition-all duration-200
+                    peer-checked:border-monokai-pink peer-checked:bg-monokai-pink/10
+                    hover:border-monokai-pink/50 hover:bg-monokai-bg-light">
+          <div class="font-bold text-lg text-monokai-text">BUY vs RENT</div>
+          <div class="text-xs text-monokai-text-muted mt-1">Compare purchasing vs renting</div>
+        </div>
       </label>
-      <label class="flex items-center gap-2 cursor-pointer">
+      <label class="flex-1 min-w-[200px]">
         <input
           type="radio"
           name="scenario"
           value="sell_vs_keep"
           bind:group={formInputs.scenario}
-          class="w-4 h-4 text-monokai-pink"
+          class="peer sr-only"
         />
-        <span>SELL vs KEEP</span>
+        <div class="px-6 py-4 rounded-lg border-2 border-monokai-border cursor-pointer transition-all duration-200
+                    peer-checked:border-monokai-cyan peer-checked:bg-monokai-cyan/10
+                    hover:border-monokai-cyan/50 hover:bg-monokai-bg-light">
+          <div class="font-bold text-lg text-monokai-text">SELL vs KEEP</div>
+          <div class="text-xs text-monokai-text-muted mt-1">Analyze selling vs keeping</div>
+        </div>
       </label>
     </div>
   </section>
 
   <!-- Economic Assumptions -->
-  <section class="bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="group-title">Economic Assumptions</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
+  <section class="form-section">
+    <h2 class="group-title">
+      Economic Assumptions
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-2">
         <label class="label">
           Inflation Rate (%)
-          <input
-            type="text"
-            bind:value={formInputs.inflationRate}
-            class="input-field w-full mt-1"
-            placeholder="3"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.inflationRate}
+          class="input-field w-full font-mono text-lg"
+          placeholder="3"
+        />
         <p class="help-text">Annual inflation for all recurring costs</p>
       </div>
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Investment Return Rate (%)
-          <input
-            type="text"
-            bind:value={formInputs.investmentReturnRate}
-            class="input-field w-full mt-1"
-            placeholder="10"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.investmentReturnRate}
+          class="input-field w-full font-mono text-lg"
+          placeholder="10"
+        />
         <p class="help-text">Expected return on investments</p>
       </div>
       <div class="md:col-span-2">
-        <label class="flex items-center gap-2 cursor-pointer">
+        <label class="flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 border-monokai-border hover:border-monokai-cyan/50 transition-all">
           <input
             type="checkbox"
             bind:checked={formInputs.include30Year}
-            class="w-4 h-4 text-monokai-pink"
+            class="w-5 h-5 rounded border-monokai-border text-monokai-cyan focus:ring-monokai-cyan focus:ring-2"
           />
-          <span>Include 30-Year Projections</span>
+          <div>
+            <span class="font-semibold text-monokai-text">Include 30-Year Projections</span>
+            <p class="help-text mt-0">Show 15y, 20y, 30y periods (default: 10y max)</p>
+          </div>
         </label>
-        <p class="help-text">Show 15y, 20y, 30y periods (default: 10y max)</p>
       </div>
     </div>
   </section>
 
   <!-- Buying/Asset Section -->
-  <section class="bg-monokai-bg-light p-6 rounded-lg">
+  <section class="form-section">
     <h2 class="group-title">
-      {formInputs.scenario === 'sell_vs_keep' ? 'Asset' : 'Buying'}
+      {formInputs.scenario === 'sell_vs_keep' ? 'Asset Details' : 'Buying Details'}
     </h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-2">
         <label class="label">
           {formInputs.scenario === 'sell_vs_keep' ? 'Original Purchase Price' : 'Asset Purchase Price'}
-          <input
-            type="text"
-            bind:value={formInputs.purchasePrice}
-            class="input-field w-full mt-1"
-            placeholder="500K or 500000"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.purchasePrice}
+          class="input-field w-full font-mono text-lg"
+          placeholder="500K or 500000"
+        />
         <p class="help-text">
           {formInputs.scenario === 'sell_vs_keep' ? 'What you originally paid (for capital gains)' : 'Initial purchase price. Use K/M suffix (e.g., 500K)'}
         </p>
       </div>
 
       {#if formInputs.scenario === 'sell_vs_keep'}
-        <div>
+        <div class="space-y-2">
           <label class="label">
             Current Market Value
-            <input
-              type="text"
-              bind:value={formInputs.currentMarketValue}
-              class="input-field w-full mt-1"
-              placeholder="2.2M"
-            />
           </label>
+          <input
+            type="text"
+            bind:value={formInputs.currentMarketValue}
+            class="input-field w-full font-mono text-lg"
+            placeholder="2.2M"
+          />
           <p class="help-text">What the asset is worth today</p>
         </div>
       {/if}
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           {formInputs.scenario === 'sell_vs_keep' ? 'Original Loan Amount' : 'Loan Amount'}
-          <input
-            type="text"
-            bind:value={formInputs.loanAmount}
-            class="input-field w-full mt-1"
-            placeholder="400K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.loanAmount}
+          class="input-field w-full font-mono text-lg"
+          placeholder="400K"
+        />
         <p class="help-text">Total mortgage/loan amount</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Loan Rate (%)
-          <input
-            type="text"
-            bind:value={formInputs.loanRate}
-            class="input-field w-full mt-1"
-            placeholder="6.5"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.loanRate}
+          class="input-field w-full font-mono text-lg"
+          placeholder="6.5"
+        />
         <p class="help-text">Annual interest rate</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Loan Term
-          <input
-            type="text"
-            bind:value={formInputs.loanTerm}
-            placeholder="30y or 360m"
-            class="input-field w-full mt-1"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.loanTerm}
+          placeholder="30y or 360m"
+          class="input-field w-full font-mono text-lg"
+        />
         <p class="help-text">Duration (e.g., 30y, 15y)</p>
       </div>
 
       {#if formInputs.scenario === 'sell_vs_keep'}
-        <div>
+        <div class="space-y-2">
           <label class="label">
             Remaining Loan Term
-            <input
-              type="text"
-              bind:value={formInputs.remainingLoanTerm}
-              placeholder="25y"
-              class="input-field w-full mt-1"
-            />
           </label>
+          <input
+            type="text"
+            bind:value={formInputs.remainingLoanTerm}
+            placeholder="25y"
+            class="input-field w-full font-mono text-lg"
+          />
           <p class="help-text">Time left on loan</p>
         </div>
       {/if}
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Annual Tax & Insurance
-          <input
-            type="text"
-            bind:value={formInputs.annualInsurance}
-            class="input-field w-full mt-1"
-            placeholder="3K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.annualInsurance}
+          class="input-field w-full font-mono text-lg"
+          placeholder="3K"
+        />
         <p class="help-text">Yearly insurance cost</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Other Annual Costs
-          <input
-            type="text"
-            bind:value={formInputs.annualTaxes}
-            class="input-field w-full mt-1"
-            placeholder="5K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.annualTaxes}
+          class="input-field w-full font-mono text-lg"
+          placeholder="5K"
+        />
         <p class="help-text">Taxes, HOA, maintenance, etc.</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Monthly Expenses
-          <input
-            type="text"
-            bind:value={formInputs.monthlyExpenses}
-            class="input-field w-full mt-1"
-            placeholder="500 or -4K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.monthlyExpenses}
+          class="input-field w-full font-mono text-lg"
+          placeholder="500 or -4K"
+        />
         <p class="help-text">Utilities, etc. (can be negative if earning income)</p>
       </div>
 
-      <div class="md:col-span-2">
+      <div class="md:col-span-2 space-y-2">
         <label class="label">
           Appreciation Rate (%)
-          <input
-            type="text"
-            bind:value={formInputs.appreciationRate}
-            placeholder="3 or 5,3,2"
-            class="input-field w-full mt-1"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.appreciationRate}
+          placeholder="3 or 5,3,2"
+          class="input-field w-full font-mono text-lg"
+        />
         <p class="help-text">
           Annual rate (comma-separated for different years, e.g., '10,5,3' = 10% yr1, 5% yr2, 3% yr3+)
         </p>
@@ -263,76 +279,78 @@
   </section>
 
   <!-- Renting Section -->
-  <section class="bg-monokai-bg-light p-6 rounded-lg">
+  <section class="form-section">
     <h2 class="group-title">
       {formInputs.scenario === 'sell_vs_keep' ? 'Investing (if selling)' : 'Renting'}
     </h2>
 
     {#if formInputs.scenario === 'sell_vs_keep'}
-      <div class="mb-4">
-        <label class="flex items-center gap-2 cursor-pointer">
+      <div class="mb-6">
+        <label class="flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 border-monokai-border hover:border-monokai-cyan/50 transition-all">
           <input
             type="checkbox"
             bind:checked={formInputs.includeRentingSell}
-            class="w-4 h-4 text-monokai-pink"
+            class="w-5 h-5 rounded border-monokai-border text-monokai-cyan focus:ring-monokai-cyan focus:ring-2"
           />
-          <span>Include Renting Analysis</span>
+          <div>
+            <span class="font-semibold text-monokai-text">Include Renting Analysis</span>
+            <p class="help-text mt-0">Toggle if selling means you'll need to rent</p>
+          </div>
         </label>
-        <p class="help-text">Toggle if selling means you'll need to rent</p>
       </div>
     {/if}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-2">
         <label class="label">
           Rental Deposit
-          <input
-            type="text"
-            bind:value={formInputs.rentDeposit}
-            class="input-field w-full mt-1"
-            placeholder="5K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.rentDeposit}
+          class="input-field w-full font-mono text-lg"
+          placeholder="5K"
+        />
         <p class="help-text">Initial rental deposit</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Monthly Rent
-          <input
-            type="text"
-            bind:value={formInputs.monthlyRent}
-            class="input-field w-full mt-1"
-            placeholder="3K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.monthlyRent}
+          class="input-field w-full font-mono text-lg"
+          placeholder="3K"
+        />
         <p class="help-text">Base monthly rent amount</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Annual Rent Costs
-          <input
-            type="text"
-            bind:value={formInputs.annualRentCosts}
-            class="input-field w-full mt-1"
-            placeholder="1K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.annualRentCosts}
+          class="input-field w-full font-mono text-lg"
+          placeholder="1K"
+        />
         <p class="help-text">Yearly rental-related costs</p>
       </div>
 
       {#if formInputs.scenario === 'buy_vs_rent'}
-        <div>
+        <div class="space-y-2">
           <label class="label">
             Other Annual Costs
-            <input
-              type="text"
-              bind:value={formInputs.otherAnnualCosts}
-              class="input-field w-full mt-1"
-              placeholder="500"
-            />
           </label>
+          <input
+            type="text"
+            bind:value={formInputs.otherAnnualCosts}
+            class="input-field w-full font-mono text-lg"
+            placeholder="500"
+          />
           <p class="help-text">Additional yearly costs for renting</p>
         </div>
       {/if}
@@ -340,82 +358,86 @@
   </section>
 
   <!-- Selling Section -->
-  <section class="bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="group-title">Selling</h2>
+  <section class="form-section">
+    <h2 class="group-title">
+      Selling
+    </h2>
 
     {#if formInputs.scenario === 'buy_vs_rent'}
-      <div class="mb-4">
-        <label class="flex items-center gap-2 cursor-pointer">
+      <div class="mb-6">
+        <label class="flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 border-monokai-border hover:border-monokai-cyan/50 transition-all">
           <input
             type="checkbox"
             bind:checked={formInputs.includeSelling}
-            class="w-4 h-4 text-monokai-pink"
+            class="w-5 h-5 rounded border-monokai-border text-monokai-cyan focus:ring-monokai-cyan focus:ring-2"
           />
-          <span>Include Selling Analysis</span>
+          <div>
+            <span class="font-semibold text-monokai-text">Include Selling Analysis</span>
+            <p class="help-text mt-0">Toggle to enable/disable selling analysis</p>
+          </div>
         </label>
-        <p class="help-text">Toggle to enable/disable selling analysis</p>
       </div>
     {/if}
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-2">
         <label class="label">
           Agent Commission (%)
-          <input
-            type="text"
-            bind:value={formInputs.agentCommission}
-            class="input-field w-full mt-1"
-            placeholder="6"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.agentCommission}
+          class="input-field w-full font-mono text-lg"
+          placeholder="6"
+        />
         <p class="help-text">Percentage of sale price</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Staging/Selling Costs
-          <input
-            type="text"
-            bind:value={formInputs.stagingCosts}
-            class="input-field w-full mt-1"
-            placeholder="10K"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.stagingCosts}
+          class="input-field w-full font-mono text-lg"
+          placeholder="10K"
+        />
         <p class="help-text">Fixed costs to prepare and sell</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Tax-Free Gains Limit
-          <input
-            type="text"
-            bind:value={formInputs.taxFreeLimits}
-            placeholder="250K or 500K,0"
-            class="input-field w-full mt-1"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.taxFreeLimits}
+          placeholder="250K or 500K,0"
+          class="input-field w-full font-mono text-lg"
+        />
         <p class="help-text">Capital gains exempt from tax (comma-separated for different years)</p>
       </div>
 
-      <div>
+      <div class="space-y-2">
         <label class="label">
           Capital Gains Tax Rate (%)
-          <input
-            type="text"
-            bind:value={formInputs.capitalGainsTax}
-            class="input-field w-full mt-1"
-            placeholder="20"
-          />
         </label>
+        <input
+          type="text"
+          bind:value={formInputs.capitalGainsTax}
+          class="input-field w-full font-mono text-lg"
+          placeholder="20"
+        />
         <p class="help-text">Long-term capital gains tax rate</p>
       </div>
     </div>
   </section>
 
   <!-- Submit Button -->
-  <div class="flex justify-center">
-    <button type="submit" class="btn-primary text-lg px-8 py-3">
-      Calculate Results
+  <div class="flex justify-center pt-4">
+    <button type="submit" class="btn-primary font-mono">
+      $ ./calculate --run
     </button>
   </div>
 </form>

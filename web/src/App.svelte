@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import type { CalculatorInputs, CalculationResults } from './types';
   import { calculate } from './lib/calculator';
-  import InputForm from './components/InputForm.svelte';
+  import TerminalForm from './components/TerminalForm.svelte';
   import ResultsDisplay from './components/ResultsDisplay.svelte';
 
   // String versions for form binding
@@ -10,26 +10,26 @@
     scenario: 'buy_vs_rent',
     inflationRate: '3',
     investmentReturnRate: '10',
-    include30Year: false,
-    purchasePrice: '500000',
+    include30Year: 'no',
+    purchasePrice: '500K',
     currentMarketValue: '',
-    loanAmount: '400000',
+    loanAmount: '400K',
     loanRate: '6.5',
     loanTerm: '30y',
     remainingLoanTerm: '',
-    annualInsurance: '3000',
-    annualTaxes: '5000',
+    annualInsurance: '3K',
+    annualTaxes: '5K',
     monthlyExpenses: '500',
     appreciationRate: '3',
-    rentDeposit: '5000',
-    monthlyRent: '3000',
-    annualRentCosts: '1000',
+    rentDeposit: '5K',
+    monthlyRent: '3K',
+    annualRentCosts: '1K',
     otherAnnualCosts: '500',
-    includeSelling: false,
-    includeRentingSell: false,
+    includeSelling: 'no',
+    includeRentingSell: 'no',
     agentCommission: '6',
-    stagingCosts: '10000',
-    taxFreeLimits: '250000',
+    stagingCosts: '10K',
+    taxFreeLimits: '250K',
     capitalGainsTax: '20',
   };
 
@@ -69,23 +69,29 @@
   }
 </script>
 
-<main class="min-h-screen bg-monokai-bg text-monokai-text p-4 md:p-8">
+<main class="min-h-screen bg-black text-monokai-text p-4 md:p-8">
   <div class="max-w-7xl mx-auto">
     <header class="mb-8">
-      <h1 class="text-4xl font-bold text-monokai-pink mb-2">
-        Rent vs Buy Calculator
-      </h1>
-      <p class="text-monokai-text-muted">
-        Compare buying vs renting, or selling vs keeping your property
-      </p>
+      <div class="border-2 border-monokai-border rounded-lg p-4 bg-black">
+        <div class="flex items-center gap-2 mb-2 text-xs font-mono">
+          <span class="text-monokai-pink">$</span>
+          <span class="text-monokai-text">./calculator</span>
+        </div>
+        <h1 class="text-2xl font-bold text-monokai-orange font-mono">
+          BRSK Calculator: Buy v Rent / Sell v Keep
+        </h1>
+        <div class="mt-2 text-xs text-monokai-text-muted">
+          Make a calculated decision
+        </div>
+      </div>
     </header>
 
     {#if !showResults}
-      <InputForm bind:formInputs on:calculate={handleCalculate} />
+      <TerminalForm bind:formInputs on:calculate={handleCalculate} />
     {:else}
       <div class="mb-6">
-        <button class="btn-secondary" on:click={handleReset}>
-          ← Back to Inputs
+        <button class="terminal-back-button font-mono" on:click={handleReset}>
+          <span class="text-monokai-pink">$</span> cd .. && ./calculator
         </button>
       </div>
       {#if results && calculatedInputs}

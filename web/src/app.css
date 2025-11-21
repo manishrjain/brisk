@@ -8,25 +8,39 @@
   }
 
   body {
-    @apply bg-monokai-bg text-monokai-text;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    @apply bg-black text-monokai-text;
+    font-family: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-feature-settings: "liga" 1, "calt" 1;
+  }
+
+  ::selection {
+    background-color: #FF6188;
+    color: #000;
   }
 }
 
 @layer components {
   .input-field {
-    @apply bg-monokai-bg-light border border-monokai-border rounded px-3 py-2 text-monokai-text;
-    @apply focus:outline-none focus:ring-2 focus:ring-monokai-pink focus:border-transparent;
+    @apply bg-monokai-bg border-2 border-monokai-border rounded-lg px-4 py-3 text-monokai-text;
+    @apply focus:outline-none focus:ring-2 focus:ring-monokai-pink focus:border-monokai-pink;
+    @apply transition-all duration-200;
+    @apply hover:border-monokai-pink/50;
   }
 
   .btn-primary {
-    @apply bg-monokai-pink text-white px-4 py-2 rounded font-semibold;
-    @apply hover:bg-opacity-90 transition-colors;
+    @apply bg-gradient-to-r from-monokai-pink to-monokai-orange text-white px-8 py-4 rounded-lg font-bold;
+    @apply hover:shadow-lg hover:scale-105 transition-all duration-200;
+    @apply shadow-md;
   }
 
   .btn-secondary {
-    @apply bg-monokai-bg-light text-monokai-text px-4 py-2 rounded font-semibold border border-monokai-border;
-    @apply hover:bg-monokai-border transition-colors;
+    @apply bg-monokai-bg-light text-monokai-text px-6 py-3 rounded-lg font-semibold border-2 border-monokai-border;
+    @apply hover:border-monokai-cyan hover:bg-monokai-border transition-all duration-200;
+  }
+
+  .terminal-back-button {
+    @apply bg-transparent text-monokai-cyan px-4 py-2 border-2 border-monokai-border rounded;
+    @apply hover:border-monokai-cyan hover:bg-monokai-bg-light transition-all duration-200;
   }
 
   .table-container {
@@ -42,11 +56,11 @@
   }
 
   .data-table th {
-    @apply px-4 py-3 text-left font-semibold text-monokai-cyan;
+    @apply px-4 py-1 text-left font-semibold text-monokai-cyan;
   }
 
   .data-table td {
-    @apply px-4 py-3 border-t border-monokai-border;
+    @apply px-4 py-1 border-t border-monokai-border;
   }
 
   .data-table tr:hover {
@@ -54,19 +68,25 @@
   }
 
   .section-title {
-    @apply text-2xl font-bold text-monokai-pink mb-4;
+    @apply text-3xl font-bold text-monokai-pink mb-6;
   }
 
   .group-title {
-    @apply text-lg font-semibold text-monokai-orange mb-3;
+    @apply text-xl font-bold text-monokai-orange mb-4 flex items-center gap-2 font-mono;
   }
 
   .label {
-    @apply text-monokai-cyan font-medium mb-1 block;
+    @apply text-monokai-cyan font-semibold mb-2 block text-sm tracking-wide font-mono;
   }
 
   .help-text {
-    @apply text-sm text-monokai-text-muted mt-1;
+    @apply text-xs text-monokai-text-muted mt-1 leading-relaxed;
+  }
+
+  .form-section {
+    @apply bg-gradient-to-br from-monokai-bg-light to-monokai-bg p-8 rounded-xl border-2 border-monokai-border;
+    @apply hover:border-monokai-pink/30 transition-all duration-300;
+    @apply shadow-lg;
   }
 
   .toggle-switch {
