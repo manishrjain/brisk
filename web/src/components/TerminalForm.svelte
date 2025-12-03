@@ -2,7 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import type { CalculatorInputs, ScenarioType } from '../types';
   import { parseAmount, parseDuration, parseAppreciationRates } from '../lib/formatter';
-  import { getMarketAverages } from '../lib/marketData';
+  import { getMarketAverages, getLastUpdated } from '../lib/marketData';
 
   export let formInputs: any;
 
@@ -76,7 +76,6 @@
   $: visibleFields = fields.filter(f => f.visible());
   $: currentHelpText = visibleFields[currentFieldIndex]?.help || '';
   $: currentFieldType = visibleFields[currentFieldIndex]?.fieldType;
-  $: currentFieldKey = visibleFields[currentFieldIndex]?.key;
   $: fieldTypeHint = currentFieldType === 'currency'
     ? 'use k for thousand, m for million (e.g., 500k, 2.5m)'
     : currentFieldType === 'duration'
@@ -85,8 +84,6 @@
 
   // Market averages for investment return rate field
   const marketAvg = getMarketAverages();
-  $: showMarketHint = currentFieldKey === 'investmentReturnRate';
-  $: marketHint = `VOO ${marketAvg.voo.toFixed(1)}%, QQQ ${marketAvg.qqq.toFixed(1)}%, VTI ${marketAvg.vti.toFixed(1)}%, BND ${marketAvg.bnd.toFixed(1)}%, 60/40 ${marketAvg.mix6040.toFixed(1)}%`;
 
   function handleKeyDown(event: KeyboardEvent) {
     // Ignore if a dialog is open
@@ -328,6 +325,18 @@
         <div class="section-header">
           <span class="text-light-orange dark:text-monokai-orange">{field.headerText}</span>
         </div>
+        {#if field.key === 'header_economic'}
+          <div class="market-averages-inline">
+            <span class="text-light-text-muted dark:text-monokai-text-muted">Market Avg (10y):</span>
+            <span class="text-light-cyan dark:text-monokai-cyan">Inflation</span> {marketAvg.inflation.toFixed(1)}%,
+            <span class="text-light-cyan dark:text-monokai-cyan">VOO</span> {marketAvg.voo.toFixed(1)}%,
+            <span class="text-light-cyan dark:text-monokai-cyan">QQQ</span> {marketAvg.qqq.toFixed(1)}%,
+            <span class="text-light-cyan dark:text-monokai-cyan">VTI</span> {marketAvg.vti.toFixed(1)}%,
+            <span class="text-light-cyan dark:text-monokai-cyan">BND</span> {marketAvg.bnd.toFixed(1)}%,
+            <span class="text-light-cyan dark:text-monokai-cyan">60/40</span> {marketAvg.mix6040.toFixed(1)}%
+            <span class="text-light-text-muted dark:text-monokai-text-muted ml-2">(Updated {new Date(getLastUpdated()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})</span>
+          </div>
+        {/if}
       {:else}
         <div class="terminal-field" class:focused={index === currentFieldIndex} class:disabled={field.disabled && field.disabled()}>
           <div class="flex items-center gap-2">
@@ -368,12 +377,6 @@
       </div>
     </div>
     <div class="help-content">{currentHelpText || 'Navigate through fields using arrow keys'}{#if fieldTypeHint}<span class="text-light-text-muted dark:text-monokai-text-muted"> &nbsp;| {fieldTypeHint}</span>{/if}</div>
-    {#if showMarketHint}
-      <div class="market-hint">
-        <span class="text-light-text-muted dark:text-monokai-text-muted">Market Averages (10y):</span>
-        <span class="text-light-cyan dark:text-monokai-cyan">{marketHint}</span>
-      </div>
-    {/if}
   </div>
 </div>
 
@@ -519,10 +522,11 @@
     line-height: 1.4;
   }
 
-  .market-hint {
+  .market-averages-inline {
+    padding: 0.125rem 0.75rem 0.125rem 2.25rem;
     font-size: 0.8125rem;
     font-weight: 600;
-    margin-top: 0.25rem;
+    @apply text-light-text dark:text-monokai-text;
   }
 
   .calculate-link {

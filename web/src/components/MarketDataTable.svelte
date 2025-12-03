@@ -17,6 +17,7 @@
       <thead>
         <tr>
           <th>Period</th>
+          <th class="text-right">Inflation</th>
           <th class="text-right">VOO</th>
           <th class="text-right">QQQ</th>
           <th class="text-right">VTI</th>
@@ -28,6 +29,7 @@
         {#each years as row}
           <tr>
             <td class="font-mono">MRKT {row.year}</td>
+            <td class="text-right font-mono">{row.inflation !== null ? formatPercent(row.inflation) : '—'}</td>
             <td class="text-right font-mono">{formatPercent(row.voo)}</td>
             <td class="text-right font-mono">{formatPercent(row.qqq)}</td>
             <td class="text-right font-mono">{formatPercent(row.vti)}</td>
@@ -37,6 +39,7 @@
         {/each}
         <tr class="avg-row">
           <td class="font-mono text-light-cyan dark:text-monokai-cyan">MRKT Avg</td>
+          <td class="text-right font-mono text-light-cyan dark:text-monokai-cyan">{formatPercent(averages.inflation)}</td>
           <td class="text-right font-mono text-light-cyan dark:text-monokai-cyan">{formatPercent(averages.voo)}</td>
           <td class="text-right font-mono text-light-cyan dark:text-monokai-cyan">{formatPercent(averages.qqq)}</td>
           <td class="text-right font-mono text-light-cyan dark:text-monokai-cyan">{formatPercent(averages.vti)}</td>

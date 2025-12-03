@@ -6,6 +6,8 @@ export interface MarketData {
   qqq: Record<string, number>;
   vti: Record<string, number>;
   bnd: Record<string, number>;
+  inflation: Record<string, number>;
+  inflation_average: number;
 }
 
 export interface MarketYearData {
@@ -15,6 +17,7 @@ export interface MarketYearData {
   vti: number;
   bnd: number;
   mix6040: number;
+  inflation: number | null;
 }
 
 export interface MarketAverages {
@@ -23,6 +26,7 @@ export interface MarketAverages {
   vti: number;
   bnd: number;
   mix6040: number;
+  inflation: number;
 }
 
 export const marketData: MarketData = marketDataJson;
@@ -36,8 +40,9 @@ export function getMarketYears(): MarketYearData[] {
     const vti = marketData.vti[year] || 0;
     const bnd = marketData.bnd[year] || 0;
     const mix6040 = vti * 0.6 + bnd * 0.4;
+    const inflation = marketData.inflation?.[year] ?? null;
 
-    return { year, voo, qqq, vti, bnd, mix6040 };
+    return { year, voo, qqq, vti, bnd, mix6040, inflation };
   });
 }
 
@@ -69,7 +74,7 @@ export function getMarketAverages(): MarketAverages {
   }
 
   if (count === 0) {
-    return { voo: 0, qqq: 0, vti: 0, bnd: 0, mix6040: 0 };
+    return { voo: 0, qqq: 0, vti: 0, bnd: 0, mix6040: 0, inflation: 0 };
   }
 
   const voo = vooSum / count;
@@ -77,8 +82,9 @@ export function getMarketAverages(): MarketAverages {
   const vti = vtiSum / count;
   const bnd = bndSum / count;
   const mix6040 = vti * 0.6 + bnd * 0.4;
+  const inflation = marketData.inflation_average || 0;
 
-  return { voo, qqq, vti, bnd, mix6040 };
+  return { voo, qqq, vti, bnd, mix6040, inflation };
 }
 
 export function getLastUpdated(): string {

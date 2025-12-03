@@ -1,4 +1,4 @@
-module rentobuy
+module calculator
 
 go 1.24.0
 

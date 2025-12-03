@@ -17,11 +17,13 @@ const defaultOutputFile = "market_data.json"
 
 // MarketData stores historical annual returns
 type MarketData struct {
-	LastUpdated string             `json:"last_updated"`
-	VOO         map[string]float64 `json:"voo"`    // Year -> Annual return % (S&P 500)
-	QQQ         map[string]float64 `json:"qqq"`    // Year -> Annual return % (Nasdaq 100)
-	VTI         map[string]float64 `json:"vti"`    // Year -> Annual return % (Total Stock Market)
-	BND         map[string]float64 `json:"bnd"`    // Year -> Annual return % (Total Bond Market)
+	LastUpdated      string             `json:"last_updated"`
+	VOO              map[string]float64 `json:"voo"`               // Year -> Annual return % (S&P 500)
+	QQQ              map[string]float64 `json:"qqq"`               // Year -> Annual return % (Nasdaq 100)
+	VTI              map[string]float64 `json:"vti"`               // Year -> Annual return % (Total Stock Market)
+	BND              map[string]float64 `json:"bnd"`               // Year -> Annual return % (Total Bond Market)
+	Inflation        map[string]float64 `json:"inflation"`         // Year -> Inflation rate %
+	InflationAverage float64            `json:"inflation_average"` // 10-year average inflation rate
 }
 
 // YahooChartResponse represents the JSON response from Yahoo Finance chart API
@@ -97,6 +99,60 @@ func fetchYahooFinanceData(ticker string, startDate, endDate time.Time) ([][]str
 	return records, nil
 }
 
+// FREDResponse represents the JSON response from FRED API
+type FREDResponse struct {
+	Observations []struct {
+		Date  string `json:"date"`
+		Value string `json:"value"`
+	} `json:"observations"`
+}
+
+// fetchInflationData fetches inflation data from FRED API
+func fetchInflationData(apiKey string, years int) (map[string]float64, error) {
+	// FPCPITOTLZGUSA is the series ID for US annual inflation rate
+	startYear := time.Now().Year() - years
+	startDate := fmt.Sprintf("%d-01-01", startYear)
+	endDate := time.Now().Format("2006-01-02")
+
+	url := fmt.Sprintf("https://api.stlouisfed.org/fred/series/observations?series_id=FPCPITOTLZGUSA&api_key=%s&file_type=json&observation_start=%s&observation_end=%s",
+		apiKey, startDate, endDate)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch data: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("FRED API returned status %d", resp.StatusCode)
+	}
+
+	var fredResp FREDResponse
+	err = json.NewDecoder(resp.Body).Decode(&fredResp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %v", err)
+	}
+
+	inflation := make(map[string]float64)
+	for _, obs := range fredResp.Observations {
+		if len(obs.Date) >= 4 && obs.Value != "." {
+			year := obs.Date[:4]
+			val, err := strconv.ParseFloat(obs.Value, 64)
+			if err == nil {
+				inflation[year] = val
+			}
+		}
+	}
+
+	return inflation, nil
+}
+
 // calculateAnnualReturns calculates annual returns from daily price data
 func calculateAnnualReturns(records [][]string) (map[string]float64, error) {
 	if len(records) < 2 {
@@ -160,10 +216,11 @@ func main() {
 	fmt.Println("Fetching market data from Yahoo Finance...")
 
 	md := &MarketData{
-		VOO: make(map[string]float64),
-		QQQ: make(map[string]float64),
-		VTI: make(map[string]float64),
-		BND: make(map[string]float64),
+		VOO:       make(map[string]float64),
+		QQQ:       make(map[string]float64),
+		VTI:       make(map[string]float64),
+		BND:       make(map[string]float64),
+		Inflation: make(map[string]float64),
 	}
 
 	// Fetch data for specified years
@@ -207,6 +264,35 @@ func main() {
 		if i < len(tickers)-1 {
 			time.Sleep(1 * time.Second)
 		}
+	}
+
+	// Fetch inflation data from FRED if API key is available
+	fredAPIKey := os.Getenv("FRED_API_KEY")
+	if fredAPIKey != "" {
+		fmt.Println("  Fetching inflation data from FRED...")
+		inflation, err := fetchInflationData(fredAPIKey, *years)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Error fetching inflation data: %v\n", err)
+		} else {
+			md.Inflation = inflation
+
+			// Calculate average inflation (excluding current year)
+			currentYear := time.Now().Year()
+			var sum float64
+			var count int
+			for year, rate := range inflation {
+				yearInt, _ := strconv.Atoi(year)
+				if yearInt < currentYear {
+					sum += rate
+					count++
+				}
+			}
+			if count > 0 {
+				md.InflationAverage = sum / float64(count)
+			}
+		}
+	} else {
+		fmt.Println("  Skipping inflation data (FRED_API_KEY not set)")
 	}
 
 	// Set last updated
@@ -273,5 +359,22 @@ func printSummary(md *MarketData) {
 		fmt.Printf("%-8s %9.2f%% %9.2f%% %9.2f%% %9.2f%% %11.2f%%\n",
 			"Average", vooSum/float64(count), qqqSum/float64(count),
 			vtiSum/float64(count), bndSum/float64(count), avgMix)
+	}
+
+	// Print inflation summary if available
+	if len(md.Inflation) > 0 {
+		fmt.Println("\nInflation Data:")
+		fmt.Println("---------------")
+		inflationYears := make([]string, 0)
+		for year := range md.Inflation {
+			inflationYears = append(inflationYears, year)
+		}
+		sort.Strings(inflationYears)
+
+		for _, year := range inflationYears {
+			fmt.Printf("%-8s %9.2f%%\n", year, md.Inflation[year])
+		}
+		fmt.Println("---------------")
+		fmt.Printf("%-8s %9.2f%%\n", "Average", md.InflationAverage)
 	}
 }
