@@ -12,7 +12,12 @@ function getInitialTheme(): Theme {
     return saved;
   }
 
-  // Default to dark mode (matching current behavior)
+  // Check system preference
+  if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+    return 'light';
+  }
+
+  // Default to dark mode
   return 'dark';
 }
 
