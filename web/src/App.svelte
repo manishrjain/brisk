@@ -5,7 +5,10 @@
   import TerminalForm from './components/TerminalForm.svelte';
   import ResultsDisplay from './components/ResultsDisplay.svelte';
   import ThemeToggle from './components/ThemeToggle.svelte';
+  import SaveDialog from './components/SaveDialog.svelte';
+  import LoadDialog from './components/LoadDialog.svelte';
   import { theme } from './lib/theme';
+  import { saveConfig, loadConfig } from './lib/storage';
 
   // String versions for form binding
   let formInputs = {
@@ -38,12 +41,38 @@
   let results: CalculationResults | null = null;
   let calculatedInputs: CalculatorInputs | null = null;
   let showResults = false;
+  let showSaveDialog = false;
+  let showLoadDialog = false;
 
   function handleGlobalKeyDown(event: KeyboardEvent) {
-    // Handle Escape key to go back from results
-    if (event.key === 'Escape' && showResults) {
+    // Handle Ctrl+S to save
+    if (event.ctrlKey && event.key === 's') {
       event.preventDefault();
-      handleReset();
+      showSaveDialog = true;
+      return;
+    }
+
+    // Handle Ctrl+O to load
+    if (event.ctrlKey && event.key === 'o') {
+      event.preventDefault();
+      showLoadDialog = true;
+      return;
+    }
+
+    // Handle Escape key to go back from results or close dialogs
+    if (event.key === 'Escape') {
+      if (showSaveDialog) {
+        showSaveDialog = false;
+        return;
+      }
+      if (showLoadDialog) {
+        showLoadDialog = false;
+        return;
+      }
+      if (showResults) {
+        event.preventDefault();
+        handleReset();
+      }
     }
   }
 
@@ -122,6 +151,34 @@
     showResults = false;
     results = null;
   }
+
+  function handleSave(event: CustomEvent<{ name: string }>) {
+    const { name } = event.detail;
+    saveConfig(name, formInputs);
+    showSaveDialog = false;
+  }
+
+  function handleLoad(event: CustomEvent<{ name: string; data: Record<string, any> }>) {
+    const { data } = event.detail;
+    // Normalize boolean values
+    const normalizeBoolean = (val: any) => {
+      if (typeof val === 'boolean') return val ? 'yes' : 'no';
+      if (val === 'true') return 'yes';
+      if (val === 'false') return 'no';
+      return val;
+    };
+    if (data.includeSelling !== undefined) {
+      data.includeSelling = normalizeBoolean(data.includeSelling);
+    }
+    if (data.includeRentingSell !== undefined) {
+      data.includeRentingSell = normalizeBoolean(data.includeRentingSell);
+    }
+    if (data.include30Year !== undefined) {
+      data.include30Year = normalizeBoolean(data.include30Year);
+    }
+    formInputs = { ...formInputs, ...data };
+    showLoadDialog = false;
+  }
 </script>
 
 <main class="min-h-screen bg-light-bg dark:bg-black text-light-text dark:text-monokai-text p-4 md:p-8">
@@ -149,7 +206,7 @@
     {:else}
       <div class="mb-6">
         <button class="terminal-back-button font-mono" on:click={handleReset}>
-          <span class="text-monokai-pink">$</span> cd .. && ./calculator
+          <span class="text-light-pink dark:text-monokai-pink">$</span> cd .. && ./calculator
         </button>
       </div>
       {#if results && calculatedInputs}
@@ -158,3 +215,15 @@
     {/if}
   </div>
 </main>
+
+<SaveDialog
+  isOpen={showSaveDialog}
+  on:close={() => showSaveDialog = false}
+  on:save={handleSave}
+/>
+
+<LoadDialog
+  isOpen={showLoadDialog}
+  on:close={() => showLoadDialog = false}
+  on:load={handleLoad}
+/>

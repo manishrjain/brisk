@@ -7,6 +7,8 @@
 
   const dispatch = createEventDispatcher();
 
+  type FieldType = 'currency' | 'rate' | 'duration' | 'toggle' | 'text';
+
   interface FormField {
     key: string;
     label: string;
@@ -17,6 +19,7 @@
     isHeader?: boolean;
     headerText?: string;
     toggleValues?: string[];  // For fields that can toggle between two values
+    fieldType?: FieldType;
   }
 
   let fields: FormField[] = [];
@@ -27,38 +30,38 @@
     // Rebuild fields list when scenario changes
     fields = [
       { key: 'header_scenario', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: 'SCENARIO SELECTION' },
-      { key: 'scenario', label: 'Scenario', help: 'Select buy_vs_rent to compare buying vs renting, or sell_vs_keep to compare selling vs keeping an existing asset', placeholder: 'buy_vs_rent', visible: () => true, toggleValues: ['buy_vs_rent', 'sell_vs_keep'] },
+      { key: 'scenario', label: 'Scenario', help: 'Select buy_vs_rent to compare buying vs renting, or sell_vs_keep to compare selling vs keeping an existing asset', placeholder: 'buy_vs_rent', visible: () => true, toggleValues: ['buy_vs_rent', 'sell_vs_keep'], fieldType: 'toggle' },
 
       { key: 'header_economic', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: 'ECONOMIC ASSUMPTIONS' },
-      { key: 'inflationRate', label: 'Inflation Rate (%)', help: 'Annual inflation for all recurring costs', placeholder: '3', visible: () => true },
-      { key: 'investmentReturnRate', label: 'Investment Return (%)', help: 'Expected return on investments. Market averages shown below', placeholder: '10', visible: () => true },
-      { key: 'include30Year', label: '30-Year Projections', help: 'Toggle to show 15y, 20y, 30y periods (default: 10y max)', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'] },
+      { key: 'inflationRate', label: 'Inflation Rate (%)', help: 'Annual inflation for all recurring costs', placeholder: '3', visible: () => true, fieldType: 'rate' },
+      { key: 'investmentReturnRate', label: 'Investment Return (%)', help: 'Expected return on investments. Market averages shown below', placeholder: '10', visible: () => true, fieldType: 'rate' },
+      { key: 'include30Year', label: '30-Year Projections', help: 'Toggle to show 15y, 20y, 30y periods (default: 10y max)', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'], fieldType: 'toggle' },
 
       { key: 'header_asset', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: formInputs.scenario === 'sell_vs_keep' ? 'ASSET' : 'BUYING' },
-      { key: 'purchasePrice', label: formInputs.scenario === 'sell_vs_keep' ? 'Original Purchase Price' : 'Asset Purchase Price', help: formInputs.scenario === 'sell_vs_keep' ? 'What you originally paid for the asset (for capital gains)' : 'Initial purchase price of the asset', placeholder: '500K', visible: () => true },
-      { key: 'currentMarketValue', label: 'Current Market Value', help: 'What the asset is worth today', placeholder: '2.2M', visible: () => formInputs.scenario === 'sell_vs_keep' },
-      { key: 'loanAmount', label: formInputs.scenario === 'sell_vs_keep' ? 'Original Loan Amount' : 'Loan Amount', help: formInputs.scenario === 'sell_vs_keep' ? 'The original loan amount when purchased (we\'ll calculate remaining balance)' : 'Total mortgage/loan amount', placeholder: '400K', visible: () => true },
-      { key: 'loanRate', label: 'Loan Rate (%)', help: formInputs.scenario === 'sell_vs_keep' ? 'Annual interest rate on existing loan' : 'Annual interest rate (e.g., 6.5)', placeholder: '6.5', visible: () => true },
-      { key: 'loanTerm', label: 'Loan Term', help: formInputs.scenario === 'sell_vs_keep' ? 'Original loan duration when started (e.g., 30y)' : 'Loan duration (e.g., 5y, 30y)', placeholder: '30y', visible: () => true },
-      { key: 'remainingLoanTerm', label: 'Remaining Loan Term', help: 'Time left on loan (e.g., 25y)', placeholder: '25y', visible: () => formInputs.scenario === 'sell_vs_keep' },
-      { key: 'annualInsurance', label: 'Annual Tax & Insurance', help: formInputs.scenario === 'sell_vs_keep' ? 'Yearly costs if keeping' : 'Yearly insurance cost', placeholder: '3K', visible: () => true },
-      { key: 'annualTaxes', label: 'Other Annual Costs', help: formInputs.scenario === 'sell_vs_keep' ? 'Taxes, HOA fees, etc. if keeping' : 'Maintenance costs, etc.', placeholder: '5K', visible: () => true },
-      { key: 'monthlyExpenses', label: 'Monthly Expenses', help: formInputs.scenario === 'sell_vs_keep' ? 'Monthly costs if keeping' : 'Monthly expenses. Typically include utilities, HOA, etc. Can be negative if earning income, e.g., -4K.', placeholder: '500', visible: () => true },
-      { key: 'appreciationRate', label: 'Appreciation Rate (%)', help: formInputs.scenario === 'sell_vs_keep' ? 'Annual rate if keeping. Comma-separated for different years' : 'Annual rate (can be negative for depreciation). Comma-separated values apply to first years, last value for all remaining years (e.g., \'10,5,3\' = 10% yr1, 5% yr2, 3% yr3+)', placeholder: '3', visible: () => true },
+      { key: 'purchasePrice', label: formInputs.scenario === 'sell_vs_keep' ? 'Original Purchase Price' : 'Asset Purchase Price', help: formInputs.scenario === 'sell_vs_keep' ? 'What you originally paid for the asset (for capital gains)' : 'Initial purchase price of the asset', placeholder: '500k', visible: () => true, fieldType: 'currency' },
+      { key: 'currentMarketValue', label: 'Current Market Value', help: 'What the asset is worth today', placeholder: '2.2m', visible: () => formInputs.scenario === 'sell_vs_keep', fieldType: 'currency' },
+      { key: 'loanAmount', label: formInputs.scenario === 'sell_vs_keep' ? 'Original Loan Amount' : 'Loan Amount', help: formInputs.scenario === 'sell_vs_keep' ? 'The original loan amount when purchased (we\'ll calculate remaining balance)' : 'Total mortgage/loan amount', placeholder: '400k', visible: () => true, fieldType: 'currency' },
+      { key: 'loanRate', label: 'Loan Rate (%)', help: formInputs.scenario === 'sell_vs_keep' ? 'Annual interest rate on existing loan' : 'Annual interest rate (e.g., 6.5)', placeholder: '6.5', visible: () => true, fieldType: 'rate' },
+      { key: 'loanTerm', label: 'Loan Term', help: formInputs.scenario === 'sell_vs_keep' ? 'Original loan duration when started (e.g., 30y)' : 'Loan duration (e.g., 5y, 30y)', placeholder: '30y', visible: () => true, fieldType: 'duration' },
+      { key: 'remainingLoanTerm', label: 'Remaining Loan Term', help: 'Time left on loan (e.g., 25y)', placeholder: '25y', visible: () => formInputs.scenario === 'sell_vs_keep', fieldType: 'duration' },
+      { key: 'annualInsurance', label: 'Annual Tax & Insurance', help: formInputs.scenario === 'sell_vs_keep' ? 'Yearly costs if keeping' : 'Yearly insurance cost', placeholder: '3k', visible: () => true, fieldType: 'currency' },
+      { key: 'annualTaxes', label: 'Other Annual Costs', help: formInputs.scenario === 'sell_vs_keep' ? 'Taxes, HOA fees, etc. if keeping' : 'Maintenance costs, etc.', placeholder: '5k', visible: () => true, fieldType: 'currency' },
+      { key: 'monthlyExpenses', label: 'Monthly Expenses', help: formInputs.scenario === 'sell_vs_keep' ? 'Monthly costs if keeping' : 'Monthly expenses. Typically include utilities, HOA, etc. Can be negative if earning income, e.g., -4k.', placeholder: '500', visible: () => true, fieldType: 'currency' },
+      { key: 'appreciationRate', label: 'Appreciation Rate (%)', help: formInputs.scenario === 'sell_vs_keep' ? 'Annual rate if keeping. Comma-separated for different years' : 'Annual rate (can be negative for depreciation). Comma-separated values apply to first years, last value for all remaining years (e.g., \'10,5,3\' = 10% yr1, 5% yr2, 3% yr3+)', placeholder: '3', visible: () => true, fieldType: 'rate' },
 
       { key: 'header_renting', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: formInputs.scenario === 'sell_vs_keep' ? 'INVESTING' : 'RENTING' },
-      { key: 'includeRentingSell', label: 'Include Renting Analysis', help: 'Toggle if selling means you\'ll need to rent', placeholder: 'no', visible: () => formInputs.scenario === 'sell_vs_keep', toggleValues: ['yes', 'no'] },
-      { key: 'rentDeposit', label: 'Rental Deposit', help: formInputs.scenario === 'sell_vs_keep' ? 'Initial rental deposit if selling' : 'Initial rental deposit', placeholder: '5K', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes' },
-      { key: 'monthlyRent', label: 'Monthly Rent', help: formInputs.scenario === 'sell_vs_keep' ? 'Monthly rent if selling' : 'Base monthly rent amount', placeholder: '3K', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes' },
-      { key: 'annualRentCosts', label: 'Annual Rent Costs', help: formInputs.scenario === 'sell_vs_keep' ? 'Yearly rental costs if selling' : 'Yearly rental-related costs', placeholder: '1K', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes' },
-      { key: 'otherAnnualCosts', label: 'Other Annual Costs', help: 'Additional yearly costs for renting', placeholder: '500', visible: () => formInputs.scenario === 'buy_vs_rent' },
+      { key: 'includeRentingSell', label: 'Include Renting Analysis', help: 'Toggle if selling means you\'ll need to rent', placeholder: 'no', visible: () => formInputs.scenario === 'sell_vs_keep', toggleValues: ['yes', 'no'], fieldType: 'toggle' },
+      { key: 'rentDeposit', label: 'Rental Deposit', help: formInputs.scenario === 'sell_vs_keep' ? 'Initial rental deposit if selling' : 'Initial rental deposit', placeholder: '5k', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes', fieldType: 'currency' },
+      { key: 'monthlyRent', label: 'Monthly Rent', help: formInputs.scenario === 'sell_vs_keep' ? 'Monthly rent if selling' : 'Base monthly rent amount', placeholder: '3k', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes', fieldType: 'currency' },
+      { key: 'annualRentCosts', label: 'Annual Rent Costs', help: formInputs.scenario === 'sell_vs_keep' ? 'Yearly rental costs if selling' : 'Yearly rental-related costs', placeholder: '1k', visible: () => true, disabled: () => formInputs.scenario === 'sell_vs_keep' && formInputs.includeRentingSell !== 'yes', fieldType: 'currency' },
+      { key: 'otherAnnualCosts', label: 'Other Annual Costs', help: 'Additional yearly costs for renting', placeholder: '500', visible: () => formInputs.scenario === 'buy_vs_rent', fieldType: 'currency' },
 
       { key: 'header_selling', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: 'SELLING' },
-      { key: 'includeSelling', label: 'Include Selling Analysis', help: 'Toggle to enable/disable selling analysis', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'], disabled: () => formInputs.scenario === 'sell_vs_keep' },
-      { key: 'agentCommission', label: 'Agent Commission (%)', help: 'Percentage of sale price paid to agents', placeholder: '6', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
-      { key: 'stagingCosts', label: 'Staging/Selling Costs', help: 'Fixed costs to prepare and sell', placeholder: '10K', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
-      { key: 'taxFreeLimits', label: 'Tax-Free Gains Limit', help: 'Capital gains exempt from tax. Comma-separated for different years (e.g., \'500K,0K\' = 500K year 1, 0 year 2+)', placeholder: '250K', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
-      { key: 'capitalGainsTax', label: 'Capital Gains Tax (%)', help: 'Long-term capital gains tax rate', placeholder: '20', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes' },
+      { key: 'includeSelling', label: 'Include Selling Analysis', help: 'Toggle to enable/disable selling analysis', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'], disabled: () => formInputs.scenario === 'sell_vs_keep', fieldType: 'toggle' },
+      { key: 'agentCommission', label: 'Agent Commission (%)', help: 'Percentage of sale price paid to agents', placeholder: '6', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes', fieldType: 'rate' },
+      { key: 'stagingCosts', label: 'Staging/Selling Costs', help: 'Fixed costs to prepare and sell', placeholder: '10k', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes', fieldType: 'currency' },
+      { key: 'taxFreeLimits', label: 'Tax-Free Gains Limit', help: 'Capital gains exempt from tax. Comma-separated for different years (e.g., \'500k,0k\' = 500k year 1, 0 year 2+)', placeholder: '250k', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes', fieldType: 'currency' },
+      { key: 'capitalGainsTax', label: 'Capital Gains Tax (%)', help: 'Long-term capital gains tax rate', placeholder: '20', visible: () => true, disabled: () => formInputs.includeSelling !== 'yes', fieldType: 'rate' },
     ];
   }
 
@@ -71,6 +74,12 @@
 
   $: visibleFields = fields.filter(f => f.visible());
   $: currentHelpText = visibleFields[currentFieldIndex]?.help || '';
+  $: currentFieldType = visibleFields[currentFieldIndex]?.fieldType;
+  $: fieldTypeHint = currentFieldType === 'currency'
+    ? 'use k for thousand, m for million (e.g., 500k, 2.5m)'
+    : currentFieldType === 'duration'
+    ? 'use y for years, m for months (e.g., 29y6m)'
+    : '';
 
   function handleKeyDown(event: KeyboardEvent) {
     const currentField = visibleFields[currentFieldIndex];
@@ -320,6 +329,7 @@
                 placeholder={field.placeholder}
                 class="terminal-input w-full"
                 disabled={field.disabled && field.disabled()}
+                readonly={field.fieldType === 'toggle'}
               />
             </div>
           </div>
@@ -334,13 +344,13 @@
   <div class="help-section">
     <div class="help-header">
       <div class="help-nav">
-        <span class="text-light-cyan dark:text-monokai-cyan">↑↓</span> arrows to move | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+Enter</span> to <button type="button" on:click={handleSubmit} class="calculate-link">calculate</button>
+        <span class="text-light-cyan dark:text-monokai-cyan">↑↓</span> arrows to move | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+Enter</span> <button type="button" on:click={handleSubmit} class="calculate-link">calculate</button> | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+S</span> save | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+O</span> load
       </div>
       <div class="help-field-counter">
         Field <span class="text-light-pink dark:text-monokai-pink">{currentFieldIndex + 1}</span>/<span class="text-light-cyan dark:text-monokai-cyan">{visibleFields.length}</span>
       </div>
     </div>
-    <div class="help-content">{currentHelpText || 'Navigate through fields using arrow keys'}</div>
+    <div class="help-content">{currentHelpText || 'Navigate through fields using arrow keys'}{#if fieldTypeHint}<span class="text-light-text-muted dark:text-monokai-text-muted"> &nbsp;| {fieldTypeHint}</span>{/if}</div>
   </div>
 </div>
 
@@ -480,7 +490,7 @@
   }
 
   .help-content {
-    @apply text-light-text-muted dark:text-monokai-text-muted;
+    @apply text-light-green dark:text-monokai-green;
     font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1.4;
