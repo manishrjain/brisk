@@ -12,6 +12,14 @@
     return formatCurrencyBase(amount, forceFullNumbers || showFullNumbers);
   };
 
+  function scrollToSection(event: MouseEvent, targetId: string) {
+    event.preventDefault();
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
   function formatDuration(months: number): string {
     if (months % 12 === 0) {
       return `${months / 12}y`;
@@ -177,7 +185,7 @@
 
   <!-- Amortization Table -->
   {#if results.amortizationTable && inputs.loanAmount > 0}
-    <section class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
+    <section id="loan-amortization" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
       <h2 class="section-title">Loan Amortization Details</h2>
       <div class="table-container">
         <table class="data-table">
@@ -241,8 +249,8 @@
 
   <!-- Keep Expenses Breakdown (SELL vs KEEP only) -->
   {#if results.keepExpensesTable}
-    <section class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
-      <h2 class="section-title">Keep Expenses Breakdown</h2>
+    <section id="keep-invest-position" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
+      <h2 class="section-title">KEEP Analysis: Invest Position</h2>
       <div class="table-container">
         <table class="data-table">
           <thead>
@@ -285,9 +293,9 @@
     </section>
   {/if}
 
-  <!-- Sale Proceeds -->
-  <section class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="section-title">Sale Proceeds Analysis</h2>
+  <!-- KEEP Sale Proceeds (for sell_vs_keep) or Sale Proceeds (for buy_vs_rent) -->
+  <section id="keep-sale-proceeds" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
+    <h2 class="section-title">{inputs.scenario === 'sell_vs_keep' ? 'KEEP Analysis: Future Sale Proceeds' : 'Sale Proceeds Analysis'}</h2>
     <div class="table-container">
       <table class="data-table">
         <thead>
@@ -295,7 +303,7 @@
             <th>Period</th>
             <th class="text-right">Sale Price</th>
             <th class="text-right">Selling Cost</th>
-            <th class="text-right">Loan Payoff</th>
+            <th class="text-right"><a href="#loan-amortization" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'loan-amortization')}>Loan Payoff</a></th>
             <th class="text-right">Cap Gains</th>
             <th class="text-right">Tax</th>
             <th class="text-right">Net Proceeds</th>
@@ -317,7 +325,11 @@
       </table>
     </div>
     <div class="help-text mt-2">
-      <p>Note: Appreciation rates are applied year-by-year (compounded).</p>
+      {#if inputs.scenario === 'sell_vs_keep'}
+        <p>Note: Shows net proceeds if you KEEP the asset and sell at each future point. This Net Proceeds value feeds into KEEP Net Worth in the comparison table below.</p>
+      {:else}
+        <p>Note: Appreciation rates are applied year-by-year (compounded).</p>
+      {/if}
       <div class="grid grid-cols-[auto_1fr] gap-x-2">
         <span class="text-light-cyan dark:text-monokai-cyan">Sale Price</span><span>= Compounded property value.</span>
         <span class="text-light-cyan dark:text-monokai-cyan">Selling Cost</span><span>= Agent commission + staging costs.</span>
@@ -390,8 +402,9 @@
                 <th class="text-right">SELL Cum. Exp</th>
               {/if}
               <th class="text-right text-light-pink dark:text-monokai-pink">SELL Net Worth</th>
-              <th class="text-right">KEEP Net Position</th>
-              <th class="text-right text-light-green dark:text-monokai-green">KEEP Net Proceeds</th>
+              <th class="text-right"><a href="#keep-sale-proceeds" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-sale-proceeds')}>KEEP Sale Proceeds</a></th>
+              <th class="text-right"><a href="#keep-invest-position" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-invest-position')}>KEEP Invest Position</a></th>
+              <th class="text-right text-light-green dark:text-monokai-green">KEEP Net Worth</th>
               <th class="text-right"><span class="text-light-green dark:text-monokai-green">KEEP</span> - <span class="text-light-pink dark:text-monokai-pink">SELL</span></th>
             </tr>
           </thead>
@@ -403,8 +416,9 @@
                   <td class="text-right font-mono">{formatCurrency(row.sellCumulativeExpenses)}</td>
                 {/if}
                 <td class="text-right font-mono text-light-pink dark:text-monokai-pink">{formatCurrency(row.sellNetWorth)}</td>
+                <td class="text-right font-mono">{formatCurrency(row.keepSaleProceeds)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.keepNetPosition)}</td>
-                <td class="text-right font-mono text-light-green dark:text-monokai-green">{formatCurrency(row.keepNetProceeds)}</td>
+                <td class="text-right font-mono text-light-green dark:text-monokai-green">{formatCurrency(row.keepNetWorth)}</td>
                 <td class="text-right font-mono" class:text-light-green={row.difference > 0} class:dark:text-monokai-green={row.difference > 0} class:text-light-pink={row.difference < 0} class:dark:text-monokai-pink={row.difference < 0}>
                   {formatCurrency(row.difference)}
                 </td>
@@ -417,8 +431,9 @@
         <p>Note: Positive KEEP - SELL means keeping wins, negative means selling wins.</p>
         <div class="grid grid-cols-[auto_1fr] gap-x-2">
           <span class="text-light-cyan dark:text-monokai-cyan">SELL Net Worth</span><span>= Net proceeds from selling now invested at {formatPercent(inputs.investmentReturnRate)} return.</span>
-          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Position</span><span>= Investment value from income minus real out-of-pocket costs.</span>
-          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Proceeds</span><span>= Net proceeds if selling at that future point + net position.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Sale Proceeds</span><span>= Net proceeds if selling at that future point (from KEEP Analysis table above).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Invest Position</span><span>= Investment value from income minus real out-of-pocket costs (from Keep Expenses Breakdown).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Worth</span><span>= KEEP Sale Proceeds + KEEP Invest Position.</span>
           <span class="text-light-cyan dark:text-monokai-cyan">KEEP - SELL</span><span>= Difference in net worth (positive = keeping wins).</span>
         </div>
       </div>

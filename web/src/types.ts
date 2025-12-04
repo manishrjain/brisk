@@ -79,8 +79,9 @@ export interface SellVsKeepRow {
   period: string;
   sellCumulativeExpenses?: number;
   sellNetWorth: number;
+  keepSaleProceeds: number;
   keepNetPosition: number;
-  keepNetProceeds: number;
+  keepNetWorth: number;
   difference: number;
 }
 

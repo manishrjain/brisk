@@ -114,6 +114,12 @@
     // Initialize theme
     theme.initialize();
 
+    // Load number format preference
+    const savedNumberFormat = localStorage.getItem('brisk_full_numbers');
+    if (savedNumberFormat !== null) {
+      showFullNumbers = savedNumberFormat === 'true';
+    }
+
     // Check for shared URL params first (takes priority)
     const urlInputs = decodeInputsFromURL();
     if (urlInputs) {
@@ -227,9 +233,7 @@
             </div>
           {/if}
           <div class="flex items-center gap-1 md:gap-2">
-            {#if showResults}
-              <NumberFormatToggle {showFullNumbers} on:toggle={() => showFullNumbers = !showFullNumbers} />
-            {/if}
+            <NumberFormatToggle {showFullNumbers} on:toggle={() => { showFullNumbers = !showFullNumbers; localStorage.setItem('brisk_full_numbers', String(showFullNumbers)); }} />
             <ShareButton copied={shareCopied} on:share={handleShare} />
             <ThemeToggle />
           </div>

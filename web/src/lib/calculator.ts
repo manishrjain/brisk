@@ -534,8 +534,9 @@ export function calculate(inputs: CalculatorInputs): CalculationResults {
         period: 'NET ' + period.label,
         sellCumulativeExpenses,
         sellNetWorth,
+        keepSaleProceeds: netProceeds,
         keepNetPosition,
-        keepNetProceeds: keepNetWorth,
+        keepNetWorth: keepNetWorth,
         difference: keepNetWorth - sellNetWorth,
       };
     });
