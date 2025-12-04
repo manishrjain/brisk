@@ -72,6 +72,50 @@ export function getPeriods(loanDuration: number, include30Year: boolean): Period
   return periods;
 }
 
+// Calculate effective loan values accounting for any elapsed time
+export function getEffectiveLoanValues(inputs: CalculatorInputs): {
+  effectiveLoanAmount: number;
+  effectiveLoanTerm: number;
+  monthlyLoanPayment: number;
+} {
+  if (inputs.loanAmount <= 0) {
+    return { effectiveLoanAmount: 0, effectiveLoanTerm: 0, monthlyLoanPayment: 0 };
+  }
+
+  const monthlyRate = inputs.loanRate / 100 / 12;
+  const remainingTerm = inputs.remainingLoanTerm ?? inputs.loanTerm;
+
+  // If no elapsed time, use original values
+  if (remainingTerm >= inputs.loanTerm) {
+    const payment = calculateMonthlyPayment(inputs.loanAmount, monthlyRate, inputs.loanTerm);
+    return {
+      effectiveLoanAmount: inputs.loanAmount,
+      effectiveLoanTerm: inputs.loanTerm,
+      monthlyLoanPayment: payment,
+    };
+  }
+
+  // Calculate remaining balance based on elapsed time
+  const originalPayment = calculateMonthlyPayment(inputs.loanAmount, monthlyRate, inputs.loanTerm);
+  const monthsElapsed = inputs.loanTerm - remainingTerm;
+
+  let balance = inputs.loanAmount;
+  for (let i = 0; i < monthsElapsed; i++) {
+    const interestPayment = balance * monthlyRate;
+    const principalPayment = originalPayment - interestPayment;
+    balance -= principalPayment;
+  }
+
+  // Recalculate payment based on remaining balance and term
+  const newPayment = calculateMonthlyPayment(balance, monthlyRate, remainingTerm);
+
+  return {
+    effectiveLoanAmount: balance,
+    effectiveLoanTerm: remainingTerm,
+    monthlyLoanPayment: newPayment,
+  };
+}
+
 export function populateMonthlyCosts(inputs: CalculatorInputs): {
   monthlyBuyingCosts: number[];
   monthlyRentingCosts: number[];
@@ -90,16 +134,13 @@ export function populateMonthlyCosts(inputs: CalculatorInputs): {
   let monthlyRecurringExpenses = totalAnnualExpenses / 12 + inputs.monthlyExpenses;
 
   const monthlyRate = inputs.loanRate / 100 / 12;
-  const monthlyLoanPayment =
-    inputs.loanAmount > 0
-      ? calculateMonthlyPayment(inputs.loanAmount, monthlyRate, inputs.loanTerm)
-      : 0;
+  const { effectiveLoanAmount, effectiveLoanTerm, monthlyLoanPayment } = getEffectiveLoanValues(inputs);
 
   let currentRentingCost =
     inputs.monthlyRent + inputs.annualRentCosts / 12 + inputs.otherAnnualCosts / 12;
   let currentRecurringExpenses = monthlyRecurringExpenses;
 
-  let currentBalance = inputs.loanAmount;
+  let currentBalance = effectiveLoanAmount;
   let totalPrincipalPaid = 0;
   let totalInterestPaid = 0;
 
@@ -111,7 +152,7 @@ export function populateMonthlyCosts(inputs: CalculatorInputs): {
 
     monthlyRentingCosts[i] = currentRentingCost;
 
-    if (i < inputs.loanTerm) {
+    if (i < effectiveLoanTerm) {
       monthlyBuyingCosts[i] = monthlyLoanPayment + currentRecurringExpenses;
 
       const interestPayment = currentBalance * monthlyRate;
@@ -277,7 +318,8 @@ export function calculateRentingNetWorth(
 
 export function calculate(inputs: CalculatorInputs): CalculationResults {
   const costs = populateMonthlyCosts(inputs);
-  const periods = getPeriods(inputs.loanTerm, inputs.include30Year);
+  const { effectiveLoanTerm } = getEffectiveLoanValues(inputs);
+  const periods = getPeriods(effectiveLoanTerm, inputs.include30Year);
 
   const keepTracking = calculateKeepInvestmentTracking(
     costs.monthlyBuyingCosts,
@@ -401,6 +443,8 @@ export function calculate(inputs: CalculatorInputs): CalculationResults {
     }
 
     // Keep Expenses Breakdown table
+    const loanValues = getEffectiveLoanValues(inputs);
+
     results.keepExpensesTable = periods.map((period) => {
       const monthIndex = Math.min(period.months - 1, 359);
       const year = Math.floor(period.months / 12);
@@ -411,11 +455,7 @@ export function calculate(inputs: CalculatorInputs): CalculationResults {
       const otherCosts = (inputs.annualTaxes + inputs.monthlyExpenses * 12) * inflationFactor;
 
       // Loan payment for that year (0 if loan is paid off)
-      const monthlyRate = inputs.loanRate / 100 / 12;
-      const monthlyLoanPayment = inputs.loanAmount > 0
-        ? calculateMonthlyPayment(inputs.loanAmount, monthlyRate, inputs.loanTerm)
-        : 0;
-      const loanPayment = period.months <= inputs.loanTerm ? monthlyLoanPayment * 12 : 0;
+      const loanPayment = period.months <= loanValues.effectiveLoanTerm ? loanValues.monthlyLoanPayment * 12 : 0;
 
       // Cumulative expenses up to this period
       let cumulativeExp = 0;
@@ -450,7 +490,7 @@ export function calculate(inputs: CalculatorInputs): CalculationResults {
       const salePrice = currentMarketValue;
       const agentFee = salePrice * (inputs.agentCommission / 100);
       const totalSellingCosts = agentFee + inputs.stagingCosts;
-      const loanPayoff = inputs.loanAmount;
+      const loanPayoff = loanValues.effectiveLoanAmount;
       const capitalGains = salePrice - inputs.purchasePrice - totalSellingCosts;
       const taxFreeLimit = inputs.taxFreeLimits[0] || 0;
       const taxableGains = Math.max(0, capitalGains - taxFreeLimit);

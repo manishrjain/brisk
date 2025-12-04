@@ -78,9 +78,12 @@
           <div><span class="text-light-cyan dark:text-monokai-cyan">Loan Duration:</span> {formatDuration(inputs.loanTerm)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Annual Tax & Insurance:</span> {formatCurrency(inputs.annualInsurance, true)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Other Annual Costs:</span> {formatCurrency(inputs.annualTaxes, true)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Expenses:</span> {formatCurrency(inputs.monthlyExpenses, true)}</div>
+          {#if inputs.monthlyExpenses < 0}
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Income:</span> {formatCurrency(-inputs.monthlyExpenses, true)}</div>
+          {:else}
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Expenses:</span> {formatCurrency(inputs.monthlyExpenses, true)}</div>
+          {/if}
           <div><span class="text-light-cyan dark:text-monokai-cyan">Appreciation Rate:</span> {formatAppreciationRates(inputs.appreciationRate)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Total Monthly Cost:</span> {formatCurrency(results.monthlyBuyingCosts[0], true)}</div>
         </div>
       </div>
 
@@ -92,7 +95,6 @@
           <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Rent:</span> {formatCurrency(inputs.monthlyRent, true)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Annual Rent Costs:</span> {formatCurrency(inputs.annualRentCosts, true)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Other Annual Costs:</span> {formatCurrency(inputs.otherAnnualCosts, true)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Total Monthly Cost:</span> {formatCurrency(results.monthlyRentingCosts[0], true)}</div>
         </div>
       </div>
 
@@ -130,9 +132,12 @@
           {/if}
           <div><span class="text-light-cyan dark:text-monokai-cyan">Annual Tax & Insurance:</span> {formatCurrency(inputs.annualInsurance, true)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Other Annual Costs:</span> {formatCurrency(inputs.annualTaxes, true)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Expenses:</span> {formatCurrency(inputs.monthlyExpenses, true)}</div>
+          {#if inputs.monthlyExpenses < 0}
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Income:</span> {formatCurrency(-inputs.monthlyExpenses, true)}</div>
+          {:else}
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Monthly Expenses:</span> {formatCurrency(inputs.monthlyExpenses, true)}</div>
+          {/if}
           <div><span class="text-light-cyan dark:text-monokai-cyan">Appreciation Rate (if keeping):</span> {formatAppreciationRates(inputs.appreciationRate)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Total Monthly Cost (if keeping):</span> {formatCurrency(results.monthlyBuyingCosts[0], true)}</div>
         </div>
       </div>
 
@@ -196,9 +201,9 @@
           </tbody>
         </table>
       </div>
-      <p class="help-text mt-2">
-        Note: Monthly payment is fixed. Each payment covers interest on remaining balance, with the rest going to principal.
-      </p>
+      <div class="help-text mt-2">
+        <p>Note: Monthly payment is fixed. Each payment covers interest on remaining balance, with the rest going to principal.</p>
+      </div>
     </section>
   {/if}
 
@@ -228,9 +233,9 @@
           </tbody>
         </table>
       </div>
-      <p class="help-text mt-2">
-        Note: All recurring costs (insurance, taxes, rent, HOA, etc.) are inflated annually at {formatPercent(inputs.inflationRate)} rate.
-      </p>
+      <div class="help-text mt-2">
+        <p>Note: All recurring costs (insurance, taxes, rent, HOA, etc.) are inflated annually at {formatPercent(inputs.inflationRate)} rate.</p>
+      </div>
     </section>
   {/if}
 
@@ -266,14 +271,17 @@
           </tbody>
         </table>
       </div>
-      <p class="help-text mt-2">
-        Note: Shows annual expenses for the specific year of each period. 'Loan Payment' = Loan payments for that year (stops after loan term).
-        'Tax/Insurance' = Annual tax & insurance (inflated at {formatPercent(inputs.inflationRate)} annually).
-        'Other Costs' = Other annual costs + monthly expenses (inflated).
-        'Cumulative Exp' = Running total of raw expenses.
-        'Investment Val' = Value of invested income (compounded at {formatPercent(inputs.investmentReturnRate)} return).
-        'Net Position' = Investment value minus real out-of-pocket costs.
-      </p>
+      <div class="help-text mt-2">
+        <p>Note: This table tracks only cash flow (expenses and income) from the asset, not asset value or equity.</p>
+        <div class="grid grid-cols-[auto_1fr] gap-x-2">
+          <span class="text-light-cyan dark:text-monokai-cyan">Loan Payment</span><span>= Loan payments for that year (stops after loan term).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Tax/Insurance</span><span>= Annual tax & insurance (inflated at {formatPercent(inputs.inflationRate)} annually).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Other Costs</span><span>= Other annual costs + monthly expenses/income (inflated).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Cumulative Exp</span><span>= Running total of raw expenses.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Investment Val</span><span>= Value of invested income (compounded at {formatPercent(inputs.investmentReturnRate)} return).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Net Position</span><span>= Investment value minus real out-of-pocket costs.</span>
+        </div>
+      </div>
     </section>
   {/if}
 
@@ -308,9 +316,17 @@
         </tbody>
       </table>
     </div>
-    <p class="help-text mt-2">
-      Note: Appreciation rates are applied year-by-year (compounded). Sale price = compounded property value.
-    </p>
+    <div class="help-text mt-2">
+      <p>Note: Appreciation rates are applied year-by-year (compounded).</p>
+      <div class="grid grid-cols-[auto_1fr] gap-x-2">
+        <span class="text-light-cyan dark:text-monokai-cyan">Sale Price</span><span>= Compounded property value.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">Selling Cost</span><span>= Agent commission + staging costs.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">Loan Payoff</span><span>= Remaining loan balance at that time.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">Cap Gains</span><span>= Sale price - purchase price - selling costs.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">Tax</span><span>= Tax on gains exceeding tax-free limit.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">Net Proceeds</span><span>= Sale price - selling costs - loan payoff - tax.</span>
+      </div>
+    </div>
   </section>
 
   <!-- Comparison Table (BUY vs RENT) -->
@@ -347,11 +363,17 @@
           </tbody>
         </table>
       </div>
-      <p class="help-text mt-2">
-        Note: 'Cum Savings' = raw cost difference without investment growth.
-        'Market Return' = investment growth at {formatPercent(inputs.investmentReturnRate)} annual rate.
-        Positive RENT - BUY means renting wins, negative means buying wins.
-      </p>
+      <div class="help-text mt-2">
+        <p>Note: Positive RENT - BUY means renting wins, negative means buying wins.</p>
+        <div class="grid grid-cols-[auto_1fr] gap-x-2">
+          <span class="text-light-cyan dark:text-monokai-cyan">Asset Value</span><span>= Property value after appreciation.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">BUY Net Worth</span><span>= Asset value minus remaining loan (or net sale proceeds if selling).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Cum Savings</span><span>= Raw cost difference without investment growth.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Market Return</span><span>= Investment growth at {formatPercent(inputs.investmentReturnRate)} annual rate.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">RENT Net Worth</span><span>= Cumulative savings + market return.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">RENT - BUY</span><span>= Difference in net worth (positive = renting wins).</span>
+        </div>
+      </div>
     </section>
   {/if}
 
@@ -391,11 +413,15 @@
           </tbody>
         </table>
       </div>
-      <p class="help-text mt-2">
-        Note: 'SELL Net Worth' = Net proceeds from selling now invested at {formatPercent(inputs.investmentReturnRate)} return.
-        'KEEP Net Position' = Investment value from income minus real costs.
-        Positive KEEP - SELL means keeping wins, negative means selling wins.
-      </p>
+      <div class="help-text mt-2">
+        <p>Note: Positive KEEP - SELL means keeping wins, negative means selling wins.</p>
+        <div class="grid grid-cols-[auto_1fr] gap-x-2">
+          <span class="text-light-cyan dark:text-monokai-cyan">SELL Net Worth</span><span>= Net proceeds from selling now invested at {formatPercent(inputs.investmentReturnRate)} return.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Position</span><span>= Investment value from income minus real out-of-pocket costs.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Proceeds</span><span>= Net proceeds if selling at that future point + net position.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">KEEP - SELL</span><span>= Difference in net worth (positive = keeping wins).</span>
+        </div>
+      </div>
     </section>
   {/if}
 </div>
