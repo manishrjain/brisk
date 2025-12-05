@@ -30,7 +30,7 @@ cp -r "$DIST_DIR" "$DEST/brisk"
 
 # Update asset paths in index.html from /assets/ to brisk/
 echo "Updating asset paths in index.html..."
-sed -i 's|/assets/|brisk/|g' "$DEST/brisk/index.html"
+sed 's|/assets/|brisk/|g' "$DEST/brisk/index.html" > "$DEST/brisk/index.html.tmp" && mv "$DEST/brisk/index.html.tmp" "$DEST/brisk/index.html"
 
 # Move assets up and remove assets folder
 echo "Moving assets..."
