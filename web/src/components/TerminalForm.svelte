@@ -181,10 +181,10 @@
     setTimeout(() => {
       const input = inputRefs[currentFieldIndex];
       if (input) {
-        input.focus({ preventScroll: true });
+        input.focus();
         input.select();
-        // Scroll the field into view within the terminal-content container
-        input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Always scroll to center for consistent behavior
+        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 0);
   }
@@ -414,69 +414,23 @@
   .terminal-container {
     @apply bg-light-bg dark:bg-black;
     padding: 0.5rem;
-    padding-bottom: 0;
     @apply border-2 border-light-border dark:border-monokai-border;
     border-radius: 0.5rem;
-    display: flex;
-    flex-direction: column;
-    min-height: 60vh;
     max-width: 100%;
     overflow-x: hidden;
-    position: relative;
   }
 
   @media (min-width: 768px) {
     .terminal-container {
       padding: 1rem;
-      padding-bottom: 0;
-      height: 80vh;
-      max-height: 80vh;
+      padding-bottom: 3rem; /* Space for fixed help section */
     }
   }
 
   .terminal-content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
     padding-right: 0.5rem;
     padding-bottom: 0.5rem;
     max-width: 100%;
-  }
-
-  @media (min-width: 768px) {
-    .terminal-content {
-      margin-bottom: 0.5rem;
-    }
-  }
-
-  .terminal-content::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  :global(.dark) .terminal-content::-webkit-scrollbar-track {
-    background: #0a0a0a;
-  }
-
-  :global(:not(.dark)) .terminal-content::-webkit-scrollbar-track {
-    background: #f4f4f5;
-  }
-
-  :global(.dark) .terminal-content::-webkit-scrollbar-thumb {
-    background: #2d2d2d;
-    border-radius: 4px;
-  }
-
-  :global(:not(.dark)) .terminal-content::-webkit-scrollbar-thumb {
-    background: #d4d4d8;
-    border-radius: 4px;
-  }
-
-  :global(.dark) .terminal-content::-webkit-scrollbar-thumb:hover {
-    background: #3d3d3d;
-  }
-
-  :global(:not(.dark)) .terminal-content::-webkit-scrollbar-thumb:hover {
-    background: #a1a1aa;
   }
 
   .terminal-field {
@@ -613,12 +567,16 @@
   @media (min-width: 768px) {
     .help-section {
       display: block;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       padding: 0.5rem 1rem;
       @apply bg-light-bg-light dark:bg-[#0a0a0a];
       @apply border-t border-light-border dark:border-monokai-border;
-      flex-shrink: 0;
       max-width: 100%;
       overflow: hidden;
+      z-index: 10;
     }
   }
 

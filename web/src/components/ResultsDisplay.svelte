@@ -295,7 +295,7 @@
 
   <!-- KEEP Sale Proceeds (for sell_vs_keep) or Sale Proceeds (for buy_vs_rent) -->
   <section id="keep-sale-proceeds" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="section-title">{inputs.scenario === 'sell_vs_keep' ? 'KEEP Analysis: Future Sale Proceeds' : 'Sale Proceeds Analysis'}</h2>
+    <h2 class="section-title">{inputs.scenario === 'sell_vs_keep' ? 'KEEP Analysis: Future Sale Proceeds' : 'BUY Analysis: Future Sale Proceeds'}</h2>
     <div class="table-container">
       <table class="data-table">
         <thead>
@@ -351,7 +351,7 @@
             <tr>
               <th>Period</th>
               <th class="text-right">Asset Value</th>
-              <th class="text-right text-light-pink dark:text-monokai-pink">Buying NW</th>
+              <th class="text-right text-light-pink dark:text-monokai-pink"><a href="#keep-sale-proceeds" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-sale-proceeds')}>Buying NW</a></th>
               <th class="text-right">Cum Savings</th>
               <th class="text-right">Market Return</th>
               <th class="text-right text-light-green dark:text-monokai-green">Renting NW</th>
