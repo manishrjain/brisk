@@ -7,6 +7,8 @@
   import ThemeToggle from './components/ThemeToggle.svelte';
   import NumberFormatToggle from './components/NumberFormatToggle.svelte';
   import ShareButton from './components/ShareButton.svelte';
+  import CopyReviewButton from './components/CopyReviewButton.svelte';
+  import ProjectionToggle from './components/ProjectionToggle.svelte';
   import SaveDialog from './components/SaveDialog.svelte';
   import LoadDialog from './components/LoadDialog.svelte';
   import { theme } from './lib/theme';
@@ -48,7 +50,20 @@
   let showLoadDialog = false;
   let shareMessage = '';
   let shareCopied = false;
+  let reviewCopied = false;
   let showFullNumbers = false;
+
+  // Reactive boolean for 30-year projection toggle
+  $: include30Year = formInputs.include30Year === 'yes';
+
+  function handleProjectionToggle() {
+    formInputs.include30Year = formInputs.include30Year === 'yes' ? 'no' : 'yes';
+    // If on results page, recalculate with new projection setting
+    if (showResults && calculatedInputs) {
+      calculatedInputs = { ...calculatedInputs, include30Year: formInputs.include30Year === 'yes' };
+      results = calculate(calculatedInputs);
+    }
+  }
 
   function handleGlobalKeyDown(event: KeyboardEvent) {
     // Handle Ctrl+Shift+S to share
@@ -214,35 +229,61 @@
       shareCopied = false;
     }, 3000);
   }
+
+  async function handleCopyReview() {
+    const resultsElement = document.getElementById('results-content');
+    if (!resultsElement) return;
+
+    // Temporarily switch to full numbers for LLM review
+    const previousShowFullNumbers = showFullNumbers;
+    showFullNumbers = true;
+
+    // Wait for Svelte to re-render with full numbers
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const prompt = `Please review these financial calculations from a Buy vs Rent / Sell vs Keep calculator. Verify the math is correct, provide a brief summary of the key findings, and be ready to answer follow-up questions.
+
+---
+
+`;
+    const text = prompt + resultsElement.innerText;
+    const success = await copyToClipboard(text);
+
+    // Restore previous setting
+    showFullNumbers = previousShowFullNumbers;
+
+    if (success) {
+      shareMessage = 'Results copied! Paste into Claude or Gemini (ChatGPT struggles with calculations).';
+      reviewCopied = true;
+    } else {
+      shareMessage = 'Failed to copy results.';
+    }
+    // Clear message after 10 seconds
+    setTimeout(() => {
+      shareMessage = '';
+      reviewCopied = false;
+    }, 10000);
+  }
 </script>
 
 <main class="min-h-screen bg-light-bg dark:bg-black text-light-text dark:text-monokai-text p-4 md:p-8 overflow-x-hidden">
-  <div class="max-w-7xl mx-auto w-full">
-    <header class="mb-4 md:mb-8">
-      <div class="border-2 border-light-border dark:border-monokai-border rounded-lg p-2 md:p-4 bg-light-bg dark:bg-black">
-        <div class="flex items-center justify-between mb-1 md:mb-2">
-          {#if showResults}
-            <button class="flex items-center gap-1 md:gap-2 text-xs font-mono hover:opacity-70 transition-opacity" on:click={handleReset}>
-              <span class="text-light-pink dark:text-monokai-pink">$</span>
-              <span class="text-light-cyan dark:text-monokai-cyan">../calculator</span>
-            </button>
-          {:else}
-            <div class="flex items-center gap-1 md:gap-2 text-xs font-mono">
-              <span class="text-light-pink dark:text-monokai-pink">$</span>
-              <span class="text-light-text dark:text-monokai-text">./calculator</span>
-            </div>
-          {/if}
+  <div class="max-w-7xl mx-auto w-full" class:pt-16={showResults} class:md:pt-14={showResults}>
+    <header class="mb-4" class:fixed-header={showResults}>
+      <div class="border-2 border-light-border dark:border-monokai-border rounded-lg p-2 bg-light-bg dark:bg-black">
+        <div class="flex items-center justify-between">
+          <button class="flex items-center gap-1 md:gap-2 text-xs font-mono hover:opacity-70 transition-opacity" on:click={showResults ? handleReset : undefined}>
+            <span class="text-light-pink dark:text-monokai-pink">$</span>
+            <span class:text-light-cyan={showResults} class:dark:text-monokai-cyan={showResults} class:text-light-text={!showResults} class:dark:text-monokai-text={!showResults}>{showResults ? '../calculator' : './calculator'}</span>
+            <span class="hidden md:inline text-light-pink dark:text-monokai-pink font-bold ml-2">BRiSK: Buy v Rent / Sell v Keep</span>
+            <span class="hidden lg:inline text-light-text-muted dark:text-monokai-text-muted ml-1">— Make a calculated decision</span>
+          </button>
           <div class="flex items-center gap-1 md:gap-2">
+            <CopyReviewButton copied={reviewCopied} disabled={!showResults} on:copy={handleCopyReview} />
+            <ProjectionToggle {include30Year} on:toggle={handleProjectionToggle} />
             <NumberFormatToggle {showFullNumbers} on:toggle={() => { showFullNumbers = !showFullNumbers; localStorage.setItem('brisk_full_numbers', String(showFullNumbers)); }} />
             <ShareButton copied={shareCopied} on:share={handleShare} />
             <ThemeToggle />
           </div>
-        </div>
-        <h1 class="text-lg md:text-2xl font-bold text-light-orange dark:text-monokai-orange font-mono">
-          BRiSK Calculator: Buy v Rent / Sell v Keep
-        </h1>
-        <div class="mt-1 md:mt-2 text-xs text-light-text-muted dark:text-monokai-text-muted">
-          Make a calculated decision
         </div>
       </div>
     </header>
@@ -272,3 +313,23 @@
   on:close={() => showLoadDialog = false}
   on:load={handleLoad}
 />
+
+<style>
+  .fixed-header {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 80rem; /* max-w-7xl */
+    z-index: 50;
+    padding: 0.5rem 1rem;
+    @apply bg-light-bg dark:bg-black;
+  }
+
+  @media (min-width: 768px) {
+    .fixed-header {
+      padding: 0.5rem 2rem;
+    }
+  }
+</style>

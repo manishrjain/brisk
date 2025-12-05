@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CalculatorInputs, CalculationResults } from '../types';
   import { formatCurrency as formatCurrencyBase, formatPercent } from '../lib/formatter';
+  import { getEffectiveLoanValues } from '../lib/calculator';
   import MarketDataTable from './MarketDataTable.svelte';
 
   export let inputs: CalculatorInputs;
@@ -56,14 +57,21 @@
   };
 
   $: downpayment = inputs.purchasePrice - inputs.loanAmount;
+  $: effectiveLoanValues = getEffectiveLoanValues(inputs);
 </script>
 
-<div class="space-y-8">
+<div id="results-content" class="space-y-8">
   <!-- Input Parameters Summary -->
   <section class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg font-mono">
-    <h2 class="text-2xl font-bold text-light-pink dark:text-monokai-pink mb-6">
-      {inputs.scenario === 'buy_vs_rent' ? 'INPUT PARAMETERS' : 'INPUT PARAMETERS - SELL VS KEEP'}
-    </h2>
+    <h2 class="text-2xl font-bold text-light-pink dark:text-monokai-pink mb-6">INPUT PARAMETERS</h2>
+
+    <!-- Scenario -->
+    <div class="mb-6">
+      <h3 class="text-light-orange dark:text-monokai-orange font-bold mb-2">SCENARIO</h3>
+      <div class="ml-4 space-y-1 text-sm">
+        <div><span class="text-light-cyan dark:text-monokai-cyan">Analysis Type:</span> {inputs.scenario === 'buy_vs_rent' ? 'Buy vs Rent' : 'Sell vs Keep'}</div>
+      </div>
+    </div>
 
     <!-- Economic Assumptions -->
     <div class="mb-6">
@@ -130,9 +138,9 @@
         <div class="ml-4 space-y-1 text-sm">
           <div><span class="text-light-cyan dark:text-monokai-cyan">Original Purchase Price:</span> {formatCurrency(inputs.purchasePrice, true)}</div>
           <div><span class="text-light-cyan dark:text-monokai-cyan">Current Market Value:</span> {formatCurrency(inputs.currentMarketValue || 0, true)}</div>
-          <div><span class="text-light-cyan dark:text-monokai-cyan">Current Equity:</span> {formatCurrency(downpayment, true)}</div>
           {#if inputs.loanAmount > 0}
-            <div><span class="text-light-cyan dark:text-monokai-cyan">Remaining Loan Balance:</span> {formatCurrency(inputs.loanAmount, true)}</div>
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Original Loan Amount:</span> {formatCurrency(inputs.loanAmount, true)}</div>
+            <div><span class="text-light-cyan dark:text-monokai-cyan">Remaining Loan Balance:</span> {formatCurrency(effectiveLoanValues.effectiveLoanAmount, true)}</div>
             <div><span class="text-light-cyan dark:text-monokai-cyan">Loan Rate:</span> {formatPercent(inputs.loanRate)}</div>
             <div><span class="text-light-cyan dark:text-monokai-cyan">Remaining Loan Term:</span> {formatDuration(inputs.remainingLoanTerm || inputs.loanTerm)}</div>
           {:else}
@@ -405,7 +413,7 @@
               <th class="text-right"><a href="#keep-sale-proceeds" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-sale-proceeds')}>KEEP Sale Proceeds</a></th>
               <th class="text-right"><a href="#keep-invest-position" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-invest-position')}>KEEP Invest Position</a></th>
               <th class="text-right text-light-green dark:text-monokai-green">KEEP Net Worth</th>
-              <th class="text-right"><span class="text-light-green dark:text-monokai-green">KEEP</span> - <span class="text-light-pink dark:text-monokai-pink">SELL</span></th>
+              <th class="text-right"><span class="text-light-pink dark:text-monokai-pink">SELL</span> - <span class="text-light-green dark:text-monokai-green">KEEP</span></th>
             </tr>
           </thead>
           <tbody>
@@ -419,8 +427,8 @@
                 <td class="text-right font-mono">{formatCurrency(row.keepSaleProceeds)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.keepNetPosition)}</td>
                 <td class="text-right font-mono text-light-green dark:text-monokai-green">{formatCurrency(row.keepNetWorth)}</td>
-                <td class="text-right font-mono" class:text-light-green={row.difference > 0} class:dark:text-monokai-green={row.difference > 0} class:text-light-pink={row.difference < 0} class:dark:text-monokai-pink={row.difference < 0}>
-                  {formatCurrency(row.difference)}
+                <td class="text-right font-mono" class:text-light-pink={-row.difference > 0} class:dark:text-monokai-pink={-row.difference > 0} class:text-light-green={-row.difference < 0} class:dark:text-monokai-green={-row.difference < 0}>
+                  {formatCurrency(-row.difference)}
                 </td>
               </tr>
             {/each}
@@ -428,13 +436,13 @@
         </table>
       </div>
       <div class="help-text mt-2">
-        <p>Note: Positive KEEP - SELL means keeping wins, negative means selling wins.</p>
+        <p>Note: Positive SELL - KEEP means selling wins, negative means keeping wins.</p>
         <div class="grid grid-cols-[auto_1fr] gap-x-2">
           <span class="text-light-cyan dark:text-monokai-cyan">SELL Net Worth</span><span>= Net proceeds from selling now invested at {formatPercent(inputs.investmentReturnRate)} return.</span>
           <span class="text-light-cyan dark:text-monokai-cyan">KEEP Sale Proceeds</span><span>= Net proceeds if selling at that future point (from KEEP Analysis table above).</span>
           <span class="text-light-cyan dark:text-monokai-cyan">KEEP Invest Position</span><span>= Investment value from income minus real out-of-pocket costs (from Keep Expenses Breakdown).</span>
           <span class="text-light-cyan dark:text-monokai-cyan">KEEP Net Worth</span><span>= KEEP Sale Proceeds + KEEP Invest Position.</span>
-          <span class="text-light-cyan dark:text-monokai-cyan">KEEP - SELL</span><span>= Difference in net worth (positive = keeping wins).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">SELL - KEEP</span><span>= Difference in net worth (positive = selling wins).</span>
         </div>
       </div>
     </section>

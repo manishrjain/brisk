@@ -26,7 +26,7 @@
     @apply p-2 rounded-lg border-2 transition-all duration-200;
     @apply bg-transparent text-light-text-muted border-light-border;
     @apply dark:text-monokai-text-muted dark:border-monokai-border;
-    @apply hover:text-light-pink hover:border-light-pink;
-    @apply dark:hover:text-monokai-pink dark:hover:border-monokai-pink;
+    @apply hover:text-light-text hover:border-light-text;
+    @apply dark:hover:text-monokai-text dark:hover:border-monokai-text;
   }
 </style>

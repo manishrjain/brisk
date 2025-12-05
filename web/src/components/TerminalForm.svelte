@@ -36,7 +36,6 @@
       { key: 'header_economic', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: 'ECONOMIC ASSUMPTIONS' },
       { key: 'inflationRate', label: 'Inflation Rate (%)', help: 'Annual inflation for all recurring costs', placeholder: '3', visible: () => true, fieldType: 'rate' },
       { key: 'investmentReturnRate', label: 'Investment Return (%)', help: 'Expected return on investments. Market averages shown above', placeholder: '10', visible: () => true, fieldType: 'rate' },
-      { key: 'include30Year', label: '30-Year Projections', help: 'Toggle to show 15y, 20y, 30y periods (default: 10y max)', placeholder: 'no', visible: () => true, toggleValues: ['yes', 'no'], fieldType: 'toggle' },
 
       { key: 'header_asset', label: '', help: '', placeholder: '', visible: () => true, isHeader: true, headerText: formInputs.scenario === 'sell_vs_keep' ? 'ASSET' : 'BUYING' },
       { key: 'purchasePrice', label: formInputs.scenario === 'sell_vs_keep' ? 'Original Purchase Price' : 'Asset Purchase Price', help: formInputs.scenario === 'sell_vs_keep' ? 'What you originally paid for the asset (for capital gains)' : 'Initial purchase price of the asset', placeholder: '500k', visible: () => true, fieldType: 'currency' },
@@ -403,9 +402,6 @@
   <div class="help-section">
     <div class="help-nav">
       <span class="text-light-cyan dark:text-monokai-cyan">↑↓</span> move | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+Enter</span> <button type="button" on:click={handleSubmit} class="calculate-link">calculate</button> | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+S</span> save | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+O</span> load | <span class="text-light-cyan dark:text-monokai-cyan">Ctrl+Shift+S</span> share
-      <span class="help-field-counter">
-        | Field <span class="text-light-pink dark:text-monokai-pink">{currentFieldIndex + 1}</span>/<span class="text-light-cyan dark:text-monokai-cyan">{visibleFields.length}</span>
-      </span>
     </div>
   </div>
 </div>
@@ -569,12 +565,13 @@
       display: block;
       position: fixed;
       bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 0.5rem 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 80rem; /* max-w-7xl to match container */
+      padding: 0.5rem 2rem;
       @apply bg-light-bg-light dark:bg-[#0a0a0a];
       @apply border-t border-light-border dark:border-monokai-border;
-      max-width: 100%;
       overflow: hidden;
       z-index: 10;
     }
@@ -585,11 +582,6 @@
     font-size: 0.8125rem;
     font-weight: 600;
     line-height: 1.3;
-  }
-
-  .help-field-counter {
-    @apply text-light-text-muted dark:text-monokai-text-muted;
-    max-width: 100%;
   }
 
   .market-averages-inline {
