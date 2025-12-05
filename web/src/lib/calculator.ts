@@ -259,7 +259,8 @@ export function calculateSaleProceeds(
   inputs: CalculatorInputs,
   months: number,
   remainingLoanBalance: number[],
-  effectiveLoanAmount?: number
+  effectiveLoanAmount?: number,
+  includeSelling: boolean = true
 ): {
   salePrice: number;
   totalSellingCosts: number;
@@ -270,11 +271,6 @@ export function calculateSaleProceeds(
 } {
   const startingPrice = inputs.currentMarketValue || inputs.purchasePrice;
   const salePrice = calculateAssetValue(startingPrice, months, inputs.appreciationRate);
-
-  const years = Math.floor(months / 12);
-  const inflatedStagingCosts = inputs.stagingCosts * Math.pow(1 + inputs.inflationRate / 100, years);
-  const agentFee = salePrice * (inputs.agentCommission / 100);
-  const totalSellingCosts = agentFee + inflatedStagingCosts;
 
   let loanPayoff: number;
   if (months === 0 && effectiveLoanAmount !== undefined) {
@@ -290,6 +286,23 @@ export function calculateSaleProceeds(
     const monthIndex = Math.min(months - 1, remainingLoanBalance.length - 1);
     loanPayoff = remainingLoanBalance[monthIndex];
   }
+
+  // When includeSelling is false, skip selling costs and taxes
+  if (!includeSelling) {
+    return {
+      salePrice,
+      totalSellingCosts: 0,
+      loanPayoff,
+      capitalGains: 0,
+      taxOnGains: 0,
+      netProceeds: salePrice - loanPayoff,
+    };
+  }
+
+  const years = Math.floor(months / 12);
+  const inflatedStagingCosts = inputs.stagingCosts * Math.pow(1 + inputs.inflationRate / 100, years);
+  const agentFee = salePrice * (inputs.agentCommission / 100);
+  const totalSellingCosts = agentFee + inflatedStagingCosts;
 
   const capitalGains = salePrice - inputs.purchasePrice - totalSellingCosts;
 
@@ -343,8 +356,10 @@ export function calculate(inputs: CalculatorInputs): CalculationResults {
   );
 
   // Calculate sale proceeds for all periods
+  // For buy_vs_rent, respect the includeSelling flag; for sell_vs_keep, always include selling costs
+  const shouldIncludeSelling = inputs.scenario === 'sell_vs_keep' ? true : inputs.includeSelling;
   const saleProceedsTable = periods.map((period) => {
-    const proceeds = calculateSaleProceeds(inputs, period.months, costs.remainingLoanBalance, effectiveLoanAmount);
+    const proceeds = calculateSaleProceeds(inputs, period.months, costs.remainingLoanBalance, effectiveLoanAmount, shouldIncludeSelling);
     return {
       period: 'SALE ' + period.label,
       ...proceeds,

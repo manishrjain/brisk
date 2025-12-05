@@ -58,6 +58,7 @@
 
   $: downpayment = inputs.purchasePrice - inputs.loanAmount;
   $: effectiveLoanValues = getEffectiveLoanValues(inputs);
+  $: showSellingColumns = inputs.scenario === 'sell_vs_keep' || inputs.includeSelling;
 </script>
 
 <div id="results-content" class="space-y-8">
@@ -225,7 +226,7 @@
 
   <!-- Expenditure Table (BUY vs RENT only) -->
   {#if results.expenditureTable}
-    <section class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
+    <section id="expenditure-comparison" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
       <h2 class="section-title">Total Expenditure Comparison</h2>
       <div class="table-container">
         <table class="data-table">
@@ -303,18 +304,22 @@
 
   <!-- KEEP Sale Proceeds (for sell_vs_keep) or Sale Proceeds (for buy_vs_rent) -->
   <section id="keep-sale-proceeds" class="bg-light-bg-light dark:bg-monokai-bg-light p-6 rounded-lg">
-    <h2 class="section-title">{inputs.scenario === 'sell_vs_keep' ? 'KEEP Analysis: Future Sale Proceeds' : 'BUY Analysis: Future Sale Proceeds'}</h2>
+    <h2 class="section-title">{inputs.scenario === 'sell_vs_keep' ? 'KEEP Analysis: Future Sale Proceeds' : 'BUY Analysis: Future Asset Value'}</h2>
     <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
             <th>Period</th>
-            <th class="text-right">Sale Price</th>
-            <th class="text-right">Selling Cost</th>
+            <th class="text-right">{showSellingColumns ? 'Sale Price' : 'Asset Value'}</th>
+            {#if showSellingColumns}
+              <th class="text-right">Selling Cost</th>
+            {/if}
             <th class="text-right"><a href="#loan-amortization" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'loan-amortization')}>Loan Payoff</a></th>
-            <th class="text-right">Cap Gains</th>
-            <th class="text-right">Tax</th>
-            <th class="text-right">Net Proceeds</th>
+            {#if showSellingColumns}
+              <th class="text-right">Cap Gains</th>
+              <th class="text-right">Tax</th>
+            {/if}
+            <th class="text-right">{showSellingColumns ? 'Net Proceeds' : 'Net Equity'}</th>
           </tr>
         </thead>
         <tbody>
@@ -322,10 +327,14 @@
             <tr>
               <td class="font-mono">{row.period}</td>
               <td class="text-right font-mono">{formatCurrency(row.salePrice)}</td>
-              <td class="text-right font-mono">{formatCurrency(row.totalSellingCosts)}</td>
+              {#if showSellingColumns}
+                <td class="text-right font-mono">{formatCurrency(row.totalSellingCosts)}</td>
+              {/if}
               <td class="text-right font-mono">{formatCurrency(row.loanPayoff)}</td>
-              <td class="text-right font-mono">{formatCurrency(row.capitalGains)}</td>
-              <td class="text-right font-mono">{formatCurrency(row.taxOnGains)}</td>
+              {#if showSellingColumns}
+                <td class="text-right font-mono">{formatCurrency(row.capitalGains)}</td>
+                <td class="text-right font-mono">{formatCurrency(row.taxOnGains)}</td>
+              {/if}
               <td class="text-right font-mono">{formatCurrency(row.netProceeds)}</td>
             </tr>
           {/each}
@@ -335,16 +344,24 @@
     <div class="help-text mt-2">
       {#if inputs.scenario === 'sell_vs_keep'}
         <p>Note: Shows net proceeds if you KEEP the asset and sell at each future point. This Net Proceeds value feeds into KEEP Net Worth in the comparison table below.</p>
-      {:else}
+      {:else if showSellingColumns}
         <p>Note: Appreciation rates are applied year-by-year (compounded).</p>
+      {:else}
+        <p>Note: Shows asset value and equity without selling costs. Enable "Include Selling Analysis" to see sale proceeds with costs and taxes.</p>
       {/if}
       <div class="grid grid-cols-[auto_1fr] gap-x-2">
-        <span class="text-light-cyan dark:text-monokai-cyan">Sale Price</span><span>= Compounded property value.</span>
-        <span class="text-light-cyan dark:text-monokai-cyan">Selling Cost</span><span>= Agent commission + staging costs.</span>
+        <span class="text-light-cyan dark:text-monokai-cyan">{showSellingColumns ? 'Sale Price' : 'Asset Value'}</span><span>= Compounded property value.</span>
+        {#if showSellingColumns}
+          <span class="text-light-cyan dark:text-monokai-cyan">Selling Cost</span><span>= Agent commission + staging costs.</span>
+        {/if}
         <span class="text-light-cyan dark:text-monokai-cyan">Loan Payoff</span><span>= Remaining loan balance at that time.</span>
-        <span class="text-light-cyan dark:text-monokai-cyan">Cap Gains</span><span>= Sale price - purchase price - selling costs.</span>
-        <span class="text-light-cyan dark:text-monokai-cyan">Tax</span><span>= Tax on gains exceeding tax-free limit.</span>
-        <span class="text-light-cyan dark:text-monokai-cyan">Net Proceeds</span><span>= Sale price - selling costs - loan payoff - tax.</span>
+        {#if showSellingColumns}
+          <span class="text-light-cyan dark:text-monokai-cyan">Cap Gains</span><span>= Sale price - purchase price - selling costs.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Tax</span><span>= Tax on gains exceeding tax-free limit.</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">Net Proceeds</span><span>= Sale price - selling costs - loan payoff - tax.</span>
+        {:else}
+          <span class="text-light-cyan dark:text-monokai-cyan">Net Equity</span><span>= Asset value - loan payoff.</span>
+        {/if}
       </div>
     </div>
   </section>
@@ -360,10 +377,10 @@
               <th>Period</th>
               <th class="text-right">Asset Value</th>
               <th class="text-right text-light-pink dark:text-monokai-pink"><a href="#keep-sale-proceeds" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'keep-sale-proceeds')}>Buying NW</a></th>
-              <th class="text-right">Cum Savings</th>
+              <th class="text-right"><a href="#expenditure-comparison" class="hover:underline cursor-pointer" on:click={(e) => scrollToSection(e, 'expenditure-comparison')}>Cum Savings</a></th>
               <th class="text-right">Market Return</th>
               <th class="text-right text-light-green dark:text-monokai-green">Renting NW</th>
-              <th class="text-right"><span class="text-light-green dark:text-monokai-green">RENT</span> - <span class="text-light-pink dark:text-monokai-pink">BUY</span></th>
+              <th class="text-right"><span class="text-light-pink dark:text-monokai-pink">BUY</span> - <span class="text-light-green dark:text-monokai-green">RENT</span></th>
             </tr>
           </thead>
           <tbody>
@@ -375,8 +392,8 @@
                 <td class="text-right font-mono">{formatCurrency(row.cumulativeSavings)}</td>
                 <td class="text-right font-mono">{formatCurrency(row.marketReturn)}</td>
                 <td class="text-right font-mono text-light-green dark:text-monokai-green">{formatCurrency(row.rentingNetWorth)}</td>
-                <td class="text-right font-mono" class:text-light-green={row.difference > 0} class:dark:text-monokai-green={row.difference > 0} class:text-light-pink={row.difference < 0} class:dark:text-monokai-pink={row.difference < 0}>
-                  {formatCurrency(row.difference)}
+                <td class="text-right font-mono" class:text-light-pink={-row.difference > 0} class:dark:text-monokai-pink={-row.difference > 0} class:text-light-green={-row.difference < 0} class:dark:text-monokai-green={-row.difference < 0}>
+                  {formatCurrency(-row.difference)}
                 </td>
               </tr>
             {/each}
@@ -384,14 +401,14 @@
         </table>
       </div>
       <div class="help-text mt-2">
-        <p>Note: Positive RENT - BUY means renting wins, negative means buying wins.</p>
+        <p>Note: Positive BUY - RENT means buying wins, negative means renting wins.</p>
         <div class="grid grid-cols-[auto_1fr] gap-x-2">
           <span class="text-light-cyan dark:text-monokai-cyan">Asset Value</span><span>= Property value after appreciation.</span>
           <span class="text-light-cyan dark:text-monokai-cyan">BUY Net Worth</span><span>= Asset value minus remaining loan (or net sale proceeds if selling).</span>
           <span class="text-light-cyan dark:text-monokai-cyan">Cum Savings</span><span>= Raw cost difference without investment growth.</span>
           <span class="text-light-cyan dark:text-monokai-cyan">Market Return</span><span>= Investment growth at {formatPercent(inputs.investmentReturnRate)} annual rate.</span>
           <span class="text-light-cyan dark:text-monokai-cyan">RENT Net Worth</span><span>= Cumulative savings + market return.</span>
-          <span class="text-light-cyan dark:text-monokai-cyan">RENT - BUY</span><span>= Difference in net worth (positive = renting wins).</span>
+          <span class="text-light-cyan dark:text-monokai-cyan">BUY - RENT</span><span>= Difference in net worth (positive = buying wins).</span>
         </div>
       </div>
     </section>
