@@ -121,16 +121,6 @@ export interface PayoffVsInvestRow {
   difference: number; // payoffWealth - investWealth
 }
 
-export interface PayoffBreakdownRow {
-  period: string;
-  payoffEffPayment: number; // Cumulative effective payment in PAYOFF path
-  investEffPayment: number; // Cumulative effective payment in INVEST path
-  paymentDiff: number; // PAYOFF - INVEST (extra paid by PAYOFF path)
-  amountInvested: number; // Cumulative contributions to investment (after loan payoff)
-  investmentReturns: number; // Returns earned on investment
-  investmentValue: number; // Total investment value
-}
-
 export interface CalculationResults {
   // Common arrays for calculations
   monthlyBuyingCosts: number[];
@@ -154,5 +144,4 @@ export interface CalculationResults {
   payoffVsInvestTable?: PayoffVsInvestRow[];
   payoffAmortizationTable?: AmortizationRow[];
   investAmortizationTable?: AmortizationRow[];
-  payoffBreakdownTable?: PayoffBreakdownRow[];
 }
