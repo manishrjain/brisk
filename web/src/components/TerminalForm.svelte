@@ -414,7 +414,7 @@
 
       <!-- Privacy note -->
       <div class="privacy-note">
-        <span class="text-light-text-muted dark:text-monokai-text-muted">Privacy first: All calculations are run locally in your browser. No financial data is sent to any server.</span>
+        <span class="text-light-text-muted dark:text-monokai-text-muted">Privacy first: All calculations are run locally in your browser. No financial data is sent to any server. <a href="https://manishrjain.com/launching-brisk-calculator" target="_blank" class="text-light-cyan dark:text-monokai-cyan hover:underline">Read the launch post</a></span>
       </div>
     </form>
   </div>
