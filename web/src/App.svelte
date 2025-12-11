@@ -279,8 +279,8 @@
         <div class="flex items-center justify-between">
           <button class="flex items-center gap-1 md:gap-2 text-xs font-mono hover:opacity-70 transition-opacity" on:click={showResults ? handleReset : undefined}>
             <span class="text-light-pink dark:text-monokai-pink">$</span>
-            <span class:text-light-cyan={showResults} class:dark:text-monokai-cyan={showResults} class:text-light-text={!showResults} class:dark:text-monokai-text={!showResults}>{showResults ? '../calculator' : './calculator'}</span>
-            <span class="hidden md:inline text-light-pink dark:text-monokai-pink font-bold ml-2">BRiSK: Buy v Rent / Sell v Keep</span>
+            <span class:text-light-cyan={showResults} class:dark:text-monokai-cyan={showResults} class:text-light-text={!showResults} class:dark:text-monokai-text={!showResults}>{showResults ? '../brisk' : './brisk'}</span>
+            <span class="hidden md:inline text-light-pink dark:text-monokai-pink font-bold ml-2">Buy v Rent / Sell v Keep</span>
             <span class="hidden lg:inline text-light-text-muted dark:text-monokai-text-muted ml-1">— Don't just track expenses. Track your opportunity cost.</span>
           </button>
           <div class="flex items-center gap-1 md:gap-2">
